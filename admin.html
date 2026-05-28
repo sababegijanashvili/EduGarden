@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduGarden Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--green:#2E7D32;--green-light:#4CAF50;--green-lighter:#E8F5E9;--green-dark:#1B5E20;--white:#FFF;--gray-50:#FAFAFA;--gray-100:#F5F5F5;--gray-200:#EEE;--gray-300:#E0E0E0;--gray-400:#BDBDBD;--gray-500:#9E9E9E;--gray-600:#757575;--gray-700:#616161;--gray-800:#424242;--gray-900:#212121;--red:#D32F2F;--blue:#1976D2;--sidebar-width:240px;--header-height:64px;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,0.08);--shadow-lg:0 4px 24px rgba(0,0,0,0.12);--transition:0.2s ease}
+    html,body{height:100%}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,sans-serif;background:var(--gray-100);color:var(--gray-900);line-height:1.5}
+    #loginScreen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green-dark),var(--green) 50%,var(--green-light))}
+    #loginScreen.hidden{display:none}
+    .login-card{background:var(--white);border-radius:16px;padding:40px;width:380px;max-width:90vw;box-shadow:var(--shadow-lg);text-align:center}
+    .login-card h1{font-size:1.5rem;color:var(--green);margin-bottom:4px}
+    .login-card p{color:var(--gray-600);font-size:.875rem;margin-bottom:24px}
+    .login-logo{width:64px;height:64px;margin-bottom:16px;border-radius:50%}
+    .login-card input{width:100%;padding:12px 16px;border:2px solid var(--gray-300);border-radius:var(--radius);font-size:1rem;outline:none;transition:border-color var(--transition);margin-bottom:16px}
+    .login-card input:focus{border-color:var(--green)}
+    .login-card .btn{width:100%}
+    .login-error{color:var(--red);font-size:.85rem;margin-bottom:12px;display:none}
+    .login-error.show{display:block}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:none;border-radius:var(--radius);font-size:.9rem;font-weight:600;cursor:pointer;transition:all var(--transition)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn-primary{background:var(--green);color:var(--white)}
+    .btn-primary:hover:not(:disabled){background:var(--green-dark)}
+    .btn-danger{background:var(--red);color:var(--white)}
+    .btn-danger:hover:not(:disabled){background:#B71C1C}
+    .btn-secondary{background:var(--gray-200);color:var(--gray-800)}
+    .btn-secondary:hover:not(:disabled){background:var(--gray-300)}
+    .btn-sm{padding:6px 12px;font-size:.8rem}
+    .btn-icon{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:none;cursor:pointer;transition:all var(--transition)}
+    .btn-icon:hover{background:var(--gray-300)}
+    #app{display:flex;height:100vh}
+    #app.hidden{display:none}
+    .sidebar{width:var(--sidebar-width);background:var(--green-dark);color:var(--white);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+    .sidebar-brand{padding:20px;font-size:1.2rem;font-weight:700;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px}
+    .sidebar-brand img{width:32px;height:32px;border-radius:50%}
+    .sidebar-nav{flex:1;padding:8px 0}
+    .sidebar-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:background var(--transition);border:none;background:none;color:rgba(255,255,255,0.8);width:100%;text-align:left;font-size:.9rem}
+    .sidebar-item:hover{background:rgba(255,255,255,0.08);color:var(--white)}
+    .sidebar-item.active{background:rgba(255,255,255,0.15);color:var(--white);font-weight:600}
+    .sidebar-item .icon{font-size:1.2rem;width:24px;text-align:center}
+    .sidebar-item .badge{margin-left:auto;background:var(--red);color:white;font-size:.7rem;padding:2px 6px;border-radius:10px;font-weight:700}
+    .sidebar-footer{padding:12px 20px;border-top:1px solid rgba(255,255,255,0.1)}
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .header{height:var(--header-height);background:var(--white);border-bottom:1px solid var(--gray-300);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
+    .header h2{font-size:1.25rem;color:var(--gray-800)}
+    .header-actions{display:flex;align-items:center;gap:12px}
+    .content{flex:1;padding:24px;overflow-y:auto}
+    .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px}
+    .card-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+    .card-body{padding:20px}
+    .grid-list{display:grid;gap:16px}
+    .grid-2{grid-template-columns:repeat(2,1fr)}
+    .grid-3{grid-template-columns:repeat(3,1fr)}
+    .grid-4{grid-template-columns:repeat(4,1fr)}
+    .item-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform var(--transition),box-shadow var(--transition)}
+    .item-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+    .item-card img{width:100%;height:160px;object-fit:cover}
+    .item-card .body{padding:12px 16px}
+    .item-card .body h4{font-size:.95rem;margin-bottom:4px}
+    .item-card .body p{font-size:.8rem;color:var(--gray-600)}
+    .item-card .actions{display:flex;gap:8px;padding:8px 16px 12px;justify-content:flex-end}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:.85rem;font-weight:600;color:var(--gray-700);margin-bottom:4px}
+    .form-group label .required{color:var(--red)}
+    .form-control{width:100%;padding:10px 14px;border:2px solid var(--gray-300);border-radius:var(--radius);font-size:.9rem;outline:none;transition:border-color var(--transition);font-family:inherit}
+    .form-control:focus{border-color:var(--green)}
+    textarea.form-control{min-height:100px;resize:vertical}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:20px}
+    .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity var(--transition)}
+    .modal-overlay.active{opacity:1;pointer-events:all}
+    .modal{background:var(--white);border-radius:12px;padding:0;width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+    .modal-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+    .modal-header h3{font-size:1.1rem}
+    .modal-body{padding:20px}
+    #toastContainer{position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px}
+    .toast{padding:12px 20px;border-radius:var(--radius);color:var(--white);font-size:.9rem;font-weight:500;box-shadow:var(--shadow-lg);animation:slideIn .3s ease;max-width:360px}
+    .toast.success{background:var(--green)}.toast.error{background:var(--red)}.toast.info{background:var(--blue)}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    .confirm-dialog{text-align:center;padding:20px}
+    .confirm-dialog .icon{font-size:3rem;margin-bottom:12px}
+    .confirm-dialog h3{font-size:1.1rem;margin-bottom:8px}
+    .confirm-dialog p{color:var(--gray-600);font-size:.9rem;margin-bottom:20px}
+    .confirm-dialog .actions{display:flex;gap:12px;justify-content:center}
+    .empty-state{text-align:center;padding:40px 20px;color:var(--gray-500)}
+    .empty-state .icon{font-size:3rem;margin-bottom:8px}.empty-state p{font-size:.95rem}
+    .spinner{width:40px;height:40px;border:4px solid var(--gray-300);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto}
+    .spinner-sm{width:18px;height:18px;border-width:2px;margin:0}
+    .btn .spinner-sm{display:none}.btn.loading .spinner-sm{display:inline-block}.btn.loading .btn-text{display:none}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .file-upload{border:2px dashed var(--gray-400);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all var(--transition)}
+    .file-upload:hover{border-color:var(--green);background:var(--green-lighter)}
+    .file-upload.has-image{border-style:solid;border-color:var(--green)}
+    .file-upload img{max-width:200px;max-height:150px;border-radius:4px;margin-top:8px}
+    .file-upload .placeholder{color:var(--gray-500);font-size:.85rem}.file-upload input[type="file"]{display:none}
+    .message-item{padding:16px;border-bottom:1px solid var(--gray-200);cursor:pointer;transition:background var(--transition)}
+    .message-item:hover{background:var(--gray-50)}
+    .message-item.unread{background:#E3F2FD;border-left:3px solid var(--blue)}
+    .message-item .msg-header{display:flex;justify-content:space-between;margin-bottom:4px}
+    .message-item .msg-name{font-weight:600;font-size:.95rem}
+    .message-item .msg-date{font-size:.8rem;color:var(--gray-500)}
+    .message-item .msg-preview{font-size:.85rem;color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .message-item .msg-full{display:none;margin-top:12px;padding:12px;background:var(--gray-50);border-radius:var(--radius);font-size:.9rem;white-space:pre-wrap;line-height:1.6}
+    .message-item.expanded .msg-full{display:block}
+    .message-item .msg-actions{margin-top:8px;display:flex;gap:8px}
+    .knowledge-textarea{min-height:400px}
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .settings-section{margin-bottom:24px}
+    .settings-section h4{font-size:.95rem;color:var(--gray-700);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gray-200)}
+    .last-updated{font-size:.8rem;color:var(--gray-500);margin-top:8px}
+    @media(max-width:768px){.sidebar{width:60px}.sidebar-item span:not(.icon){display:none}.sidebar-brand span{display:none}.form-row{grid-template-columns:1fr}.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr}.header h2{font-size:1rem}.content{padding:16px}}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gray-400);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--gray-500)}
+    .staff-dragging{opacity:.5}.staff-drag-over{border-top:3px solid var(--green)}
+  </style>
+</head>
+<body>
+<div id="loginScreen">
+  <div class="login-card">
+    <img class="login-logo" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="EduGarden">
+    <h1>EduGarden Admin</h1>
+    <p>Enter password to access the dashboard</p>
+    <div class="login-error" id="loginError">Incorrect password</div>
+    <input type="password" id="loginPassword" placeholder="Enter password" autofocus>
+    <button class="btn btn-primary" id="loginBtn">Sign In</button>
+    <div style="margin-top:12px">
+      <button class="btn btn-sm btn-secondary" id="quickLoginBtn">Quick Login</button>
+    </div>
+  </div>
+</div>
+<div id="app" class="hidden">
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <img src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="Logo"><span>EduGarden</span>
+  </div>
+  <div class="sidebar-nav">
+    <button class="sidebar-item active" data-section="articles"><span class="icon">&#x1F4DD;</span><span>Articles</span></button>
+    <button class="sidebar-item" data-section="roses"><span class="icon">&#x1F339;</span><span>Rose Catalog</span></button>
+    <button class="sidebar-item" data-section="staff"><span class="icon">&#x1F465;</span><span>Staff</span></button>
+    <button class="sidebar-item" data-section="team_photos"><span class="icon">&#x1F4F8;</span><span>Team Photos</span></button>
+    <button class="sidebar-item" data-section="messages"><span class="icon">&#x2709;&#xFE0F;</span><span>Messages</span><span class="badge" id="unreadBadge" style="display:none">0</span></button>
+    <button class="sidebar-item" data-section="chatbot"><span class="icon">&#x1F916;</span><span>Chatbot Knowledge</span></button>
+    <button class="sidebar-item" data-section="settings"><span class="icon">&#x2699;&#xFE0F;</span><span>Site Settings</span></button>
+  </div>
+  <div class="sidebar-footer">
+    <button class="btn btn-sm btn-secondary" id="logoutBtnSidebar" style="width:100%">&#x1F6AA; Logout</button>
+  </div>
+</nav>
+<div class="main">
+<header class="header">
+  <h2 id="sectionTitle">Articles</h2>
+  <div class="header-actions">
+    <button class="btn btn-primary btn-sm" id="sectionActionBtn">+ Add New</button>
+    <button class="btn btn-icon" id="logoutBtnHeader" title="Logout">&#x1F6AA;</button>
+  </div>
+</header>
+<div class="content" id="sectionContent"><div class="spinner"></div></div>
+</div>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+<div class="modal">
+  <div class="modal-header"><h3 id="modalTitle">Modal</h3><button class="btn-icon" id="closeModalBtn">&times;</button></div>
+  <div class="modal-body" id="modalBody"></div>
+</div>
+</div>
+<div class="modal-overlay" id="confirmOverlay">
+<div class="modal" style="width:420px">
+  <div class="modal-body">
+    <div class="confirm-dialog">
+      <div class="icon">&#x26A0;&#xFE0F;</div>
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p id="confirmMessage">This action cannot be undone.</p>
+      <div class="actions">
+        <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="toastContainer"></div>
+<script>
+const { createClient } = supabase;
+const supabaseClient = createClient('https://exoyfpqfgixofsuginxx.supabase.co', 'sb_publishable_UExfTnoTaFgieljt6oiZ8Q_m0f2raxy');
+
+let currentSection = 'articles';
+let currentAction = null;
+let currentEditId = null;
+let confirmCallback = null;
+let unreadCount = 0;
+let currentSelectedFile = null;
+let staffOrderChanged = false;
+var sectionNames = { articles:'Articles', roses:'Rose Catalog', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
+
+document.getElementById('loginBtn').addEventListener('click', handleLogin);
+document.getElementById('quickLoginBtn').addEventListener('click', function() { document.getElementById('loginPassword').value = 'Edugarden!2026'; handleLogin(); });
+document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
+document.getElementById('logoutBtnSidebar').addEventListener('click', handleLogout);
+document.getElementById('logoutBtnHeader').addEventListener('click', handleLogout);
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
+document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
+document.getElementById('confirmDeleteBtn').addEventListener('click', executeConfirm);
+document.getElementById('sectionActionBtn').addEventListener('click', handleSectionAction);
+document.querySelectorAll('.sidebar-item').forEach(function(el) { el.addEventListener('click', function() { switchSection(this.dataset.section); }); });
+
+function handleLogin() {
+  var pw = document.getElementById('loginPassword').value;
+  var err = document.getElementById('loginError');
+  if (pw === 'Edugarden!2026') {
+    sessionStorage.setItem('edugarden_admin', 'logged_in');
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    initApp();
+  } else {
+    err.classList.add('show');
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').focus();
+  }
+}
+function handleLogout() {
+  sessionStorage.removeItem('edugarden_admin');
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+function showToast(message, type) {
+  if (!type) type = 'success';
+  var c = document.getElementById('toastContainer');
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = message;
+  c.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+function openModal(title) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalOverlay').classList.add('active'); }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  document.getElementById('modalBody').innerHTML = '';
+  currentAction = null; currentEditId = null; currentSelectedFile = null;
+}
+function showConfirm(title, message, callback) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  confirmCallback = callback;
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('active'); confirmCallback = null; }
+function executeConfirm() { if (confirmCallback) confirmCallback(); closeConfirm(); }
+
+function switchSection(section) {
+  currentSection = section;
+  document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.toggle('active', el.dataset.section === section); });
+  document.getElementById('sectionTitle').textContent = sectionNames[section];
+  var actionBtn = document.getElementById('sectionActionBtn');
+  if (section === 'messages' || section === 'chatbot' || section === 'settings') { actionBtn.style.display = 'none'; }
+  else { actionBtn.style.display = 'inline-flex'; actionBtn.textContent = section === 'team_photos' ? '+ Upload Photo' : '+ Add New'; }
+  renderSection(section);
+}
+function handleSectionAction() {
+  if (currentSection === 'articles') showArticleForm();
+  else if (currentSection === 'roses') srf();
+  else if (currentSection === 'staff') ssf();
+  else if (currentSection === 'team_photos') stpf();
+}
+
+function createFileUpload(currentUrl, onFileSelect) {
+  var wrapper = document.createElement('div');
+  wrapper.className = 'file-upload' + (currentUrl ? ' has-image' : '');
+  if (currentUrl) { wrapper.innerHTML = '<img src="' + currentUrl + '" alt="preview"><p style="font-size:0.8rem;color:var(--gray-500);margin-top:4px;">Click to change</p>'; }
+  else { wrapper.innerHTML = '<div class="placeholder">Click to upload image</div>'; }
+  var input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = function(e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) { wrapper.innerHTML = '<img src="' + ev.target.result + '" alt="preview"><p style="font-size:0.8rem;color:var(--gray-500);margin-top:4px;">Click to change</p>'; wrapper.classList.add('has-image'); };
+    reader.readAsDataURL(file);
+    if (onFileSelect) onFileSelect(file);
+  };
+  wrapper.onclick = function() { input.click(); };
+  wrapper.appendChild(input);
+  return wrapper;
+}
+async function uploadImage(file) {
+  if (!file) return null;
+  var ext = file.name.split('.').pop();
+  var fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
+  var result = await supabaseClient.storage.from('images').upload(fileName, file);
+  if (result.error) { showToast('Upload failed: ' + result.error.message, 'error'); return null; }
+  return 'https://exoyfpqfgixofsuginxx.supabase.co/storage/v1/object/public/images/' + fileName;
+}
+async function deleteImage(url) {
+  if (!url) return;
+  var prefix = 'https://exoyfpqfgixofsuginxx.supabase.co/storage/v1/object/public/images/';
+  if (url.indexOf(prefix) !== 0) return;
+  var path = url.substring(prefix.length);
+  await supabaseClient.storage.from('images').remove([path]);
+}
+function showLoading(container) { container.innerHTML = '<div class="spinner"></div>'; }
+async function initApp() { await updateUnreadBadge(); renderSection('articles'); }
+async function updateUnreadBadge() {
+  try {
+    var result = await supabaseClient.from('contact_messages').select('id', { count: 'exact', head: true }).eq('is_read', false);
+    if (!result.error) { unreadCount = result.count || 0; var badge = document.getElementById('unreadBadge'); badge.textContent = unreadCount; badge.style.display = unreadCount > 0 ? 'inline' : 'none'; }
+  } catch(e) {}
+}
+function renderSection(section) {
+  var content = document.getElementById('sectionContent'); showLoading(content);
+  if (section === 'articles') renderArticles(content);
+  else if (section === 'roses') rr(content);
+  else if (section === 'staff') rsf(content);
+  else if (section === 'team_photos') rtp(content);
+  else if (section === 'messages') rm(content);
+  else if (section === 'chatbot') rcb(content);
+  else if (section === 'settings') rset(content);
+  updateUnreadBadge();
+}
+function setLoading(btn, loading) { if (loading) { btn.classList.add('loading'); btn.disabled = true; } else { btn.classList.remove('loading'); btn.disabled = false; } }
+
+if (sessionStorage.getItem('edugarden_admin') === 'logged_in') {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  initApp();
+}
+
+// ============================================================
+// 1. ARTICLES
+// ============================================================
+async function renderArticles(container) {
+  var result = await supabaseClient.from('articles').select('*').order('created_at', { ascending: false });
+  if (result.error) { container.innerHTML = '<p class="empty-state">Error: ' + result.error.message + '</p>'; return; }
+  if (!result.data || result.data.length === 0) { container.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4DD;</div><p>No articles yet.</p></div>'; return; }
+  var html = '<div class="grid-list grid-2">';
+  for (var i = 0; i < result.data.length; i++) {
+    var a = result.data[i];
+    var date = new Date(a.created_at).toLocaleDateString();
+    var preview = (a.content_en || a.content_ge || '').substring(0, 80);
+    html += '<div class="item-card">';
+    if (a.image_url) { html += '<img src="' + a.image_url + '" alt="' + (a.title_en || '') + '">'; }
+    else { html += '<div style="height:160px;background:var(--gray-200);display:flex;align-items:center;justify-content:center;color:var(--gray-500);">&#x1F4DD; No Image</div>'; }
+    html += '<div class="body"><h4>' + (a.title_en || 'Untitled') + '</h4>';
+    html += '<p>' + preview + (preview.length >= 80 ? '...' : '') + '</p>';
+    html += '<p style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">' + date + '</p></div>';
+    html += '<div class="actions">';
+    html += '<button class="btn btn-sm btn-primary" onclick="showArticleForm(\'' + a.id + '\')">&#x270F;&#xFE0F; Edit</button>';
+    html += '<button class="btn btn-sm btn-danger" onclick="da(\'' + a.id + '\',\'' + (a.image_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
+    html += '</div></div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+function showArticleForm(id) {
+  currentAction = id ? 'edit' : 'add'; currentEditId = id; currentSelectedFile = null;
+  if (!id) {
+    var html = '<form id="articleForm">';
+    html += '<div class="form-row"><div class="form-group"><label>Title (EN) <span class="required">*</span></label><input class="form-control" id="article_title_en" required></div>';
+    html += '<div class="form-group"><label>Title (GE) <span class="required">*</span></label><input class="form-control" id="article_title_ge" required></div></div>';
+    html += '<div class="form-group"><label>Content (EN) <span class="required">*</span></label><textarea class="form-control" id="article_content_en" required></textarea></div>';
+    html += '<div class="form-group"><label>Content (GE) <span class="required">*</span></label><textarea class="form-control" id="article_content_ge" required></textarea></div>';
+    html += '<div class="form-group"><label>Image</label><div id="articleImageUpload"></div></div>';
+    html += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="closeModal()">Cancel</button><button class="btn btn-primary" type="submit" id="articleSaveBtn">Save</button></div></form>';
+    openModal('Add Article'); document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('articleImageUpload').appendChild(createFileUpload(null, function(f) { currentSelectedFile = f; }));
+    document.getElementById('articleForm').onsubmit = function(e) { e.preventDefault(); saveArticle(); };
+  } else {
+    (async function() {
+      var r = await supabaseClient.from('articles').select('*').eq('id', id).single();
+      if (r.error || !r.data) { showToast('Error loading article', 'error'); closeModal(); return; }
+      var a = r.data;
+      var html = '<form id="articleForm">';
+      html += '<div class="form-row"><div class="form-group"><label>Title (EN) <span class="required">*</span></label><input class="form-control" id="article_title_en" value="' + (a.title_en||'').replace(/"/g,'"') + '" required></div>';
+      html += '<div class="form-group"><label>Title (GE) <span class="required">*</span></label><input class="form-control" id="article_title_ge" value="' + (a.title_ge||'').replace(/"/g,'"') + '" required></div></div>';
+      html += '<div class="form-group"><label>Content (EN) <span class="required">*</span></label><textarea class="form-control" id="article_content_en" required>' + (a.content_en||'').replace(/</g,'<').replace(/>/g,'>') + '</textarea></div>';
+      html += '<div class="form-group"><label>Content (GE) <span class="required">*</span></label><textarea class="form-control" id="article_content_ge" required>' + (a.content_ge||'').replace(/</g,'<').replace(/>/g,'>') + '</textarea></div>';
+      html += '<div class="form-group"><label>Image</label><div id="articleImageUpload"></div></div>';
+      html += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="closeModal()">Cancel</button><button class="btn btn-primary" type="submit" id="articleSaveBtn">Save</button></div></form>';
+      openModal('Edit Article'); document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('articleImageUpload').appendChild(createFileUpload(a.image_url, function(f) { currentSelectedFile = f; }));
+      document.getElementById('articleForm').onsubmit = function(e) { e.preventDefault(); saveArticle(); };
+    })();
+  }
+}
+
+async function saveArticle() {
+    var te = (document.getElementById('ate') || document.getElementById('article_title_en')).value.trim();
+    var tg = (document.getElementById('atg') || document.getElementById('article_title_ge')).value.trim();
+    var ce = (document.getElementById('ace') || document.getElementById('article_content_en')).value.trim();
+    var cg = (document.getElementById('acg') || document.getElementById('article_content_ge')).value.trim();
+  if (!te || !tg || !ce || !cg) { st('Fill all required fields', 'error'); return; }
+  try {
+    var iu = null;
+    if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
+    var d = { title_en: te, title_ge: tg, content_en: ce, content_ge: cg };
+    if (iu) d.image_url = iu;
+    var r;
+    if (currentAction === 'add') { r = await supabaseClient.from('articles').insert(d); }
+    else { r = await supabaseClient.from('articles').update(d).eq('id', currentEditId); }
+    if (r.error) { st('Error: ' + r.error.message, 'error'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('articles'); }
+  } catch(e) { st('Error: ' + e.message, 'error'); }
+}
+
+
+// Delete article
+function da(id, iu) {
+  sc('Delete Article?', 'This cannot be undone.', async function() {
+    await supabaseClient.from('articles').delete().eq('id', id);
+    if (iu) await di(iu);
+    st('Deleted!');
+    rs('articles');
+  });
+}
+
+// ============================================================
+// 2. ROSE CATALOG
+// ============================================================
+async function rr(c) {
+  var r = await supabaseClient.from('roses').select('*');
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  if (r.data) { r.data.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); }); }
+  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F339;</div><p>No roses yet.</p></div>'; return; }
+  var h = '<div class="grid-list grid-3">';
+  for (var i = 0; i < r.data.length; i++) {
+    var ro = r.data[i];
+    var pr = (ro.description_en || ro.description_ge || '').substring(0, 80);
+    h += '<div class="item-card">';
+    if (ro.image_url) { h += '<img src="' + ro.image_url + '" alt="' + (ro.name || '') + '">'; }
+    else { h += '<div style="height:160px;background:var(--gray-200);display:flex;align-items:center;justify-content:center;color:var(--gray-500);">&#x1F339; No Image</div>'; }
+    h += '<div class="body"><h4>' + (ro.name || 'Unnamed') + '</h4><p>' + pr + (pr.length >= 80 ? '...' : '') + '</p></div>';
+    h += '<div class="actions"><button class="btn btn-sm btn-primary" onclick="srf(\'' + ro.id + '\')">&#x270F;&#xFE0F; Edit</button>';
+    h += '<button class="btn btn-sm btn-danger" onclick="dr(\'' + ro.id + '\',\'' + (ro.image_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button></div></div>';
+  }
+  h += '</div>';
+  c.innerHTML = h;
+}
+
+function srf(id) {
+  currentAction = id ? 'edit' : 'add';
+  currentEditId = id;
+  currentSelectedFile = null;
+  if (!id) {
+    var h = '<form id="rf">';
+    h += '<div class="form-row"><div class="form-group"><label>Name (EN) *</label><input class="form-control" id="rne" required></div>';
+    h += '<div class="form-group"><label>Name (GE) *</label><input class="form-control" id="rng" required></div></div>';
+    h += '<div class="form-row"><div class="form-group"><label>Desc (EN)</label><textarea class="form-control" id="rde"></textarea></div>';
+    h += '<div class="form-group"><label>Desc (GE)</label><textarea class="form-control" id="rdg"></textarea></div></div>';
+    h += '<div class="form-group"><label>Image</label><div id="roseImageUpload"></div></div>';
+    h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
+    h += '<button class="btn btn-primary" type="submit">Save</button></div></form>';
+    om('Add Rose');
+    document.getElementById('modalBody').innerHTML = h;
+    document.getElementById('roseImageUpload').appendChild(cfu(null, function(f) { currentSelectedFile = f; }));
+    document.getElementById('rf').onsubmit = function(e) { e.preventDefault(); sr(); };
+  } else {
+    (async function() {
+      var r = await supabaseClient.from('roses').select('*').eq('id', id).single();
+      if (r.error || !r.data) { st('Error loading rose', 'error'); cm(); return; }
+      var ro = r.data;
+      var h = '<form id="rf">';
+      h += '<div class="form-row"><div class="form-group"><label>Name (EN) *</label><input class="form-control" id="rne" value="' + (ro.name || '').replace(/"/g, '&quot;') + '" required></div>';
+      h += '<div class="form-group"><label>Name (GE) *</label><input class="form-control" id="rng" value="' + (ro.name || '').replace(/"/g, '&quot;') + '" required></div></div>';
+      h += '<div class="form-row"><div class="form-group"><label>Desc (EN)</label><textarea class="form-control" id="rde">' + (ro.description_en || '').replace(/</g, '<').replace(/>/g, '>') + '</textarea></div>';
+      h += '<div class="form-group"><label>Desc (GE)</label><textarea class="form-control" id="rdg">' + (ro.description_ge || '').replace(/</g, '<').replace(/>/g, '>') + '</textarea></div></div>';
+      h += '<div class="form-group"><label>Image</label><div id="roseImageUpload"></div></div>';
+      h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
+      h += '<button class="btn btn-primary" type="submit">Save</button></div></form>';
+      om('Edit Rose');
+      document.getElementById('modalBody').innerHTML = h;
+      document.getElementById('roseImageUpload').appendChild(cfu(ro.image_url, function(f) { currentSelectedFile = f; }));
+      document.getElementById('rf').onsubmit = function(e) { e.preventDefault(); sr(); };
+    })();
+  }
+}
+
+async function sr() {
+  var ne = document.getElementById('rne').value.trim();
+  var ng = document.getElementById('rng').value.trim();
+  if (!ne || !ng) { st('Name fields required', 'error'); return; }
+  try {
+    var iu = null;
+    if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
+    var d = { name: ne, description_en: document.getElementById('rde').value.trim(), description_ge: document.getElementById('rdg').value.trim() };
+    if (iu) d.image_url = iu;
+    var result;
+    if (currentAction === 'add') { result = await supabaseClient.from('roses').insert(d); }
+    else { result = await supabaseClient.from('roses').update(d).eq('id', currentEditId); }
+    if (result.error) { st('Error: ' + result.error.message, 'error'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('roses'); }
+  } catch(e) { st('Error: ' + e.message, 'error'); }
+}
+
+// Delete rose
+async function dr(id, iu) {
+  sc('Delete Rose?', 'This cannot be undone.', async function() {
+    await supabaseClient.from('roses').delete().eq('id', id);
+    if (iu) await di(iu);
+    st('Deleted!');
+    rs('roses');
+  });
+}
+
+// ============================================================
+// 3. STAFF
+// ============================================================
+async function rsf(c) {
+  var r = await supabaseClient.from('staff').select('*').order('order_index', { ascending: true });
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F465;</div><p>No staff yet.</p></div>'; return; }
+  var h = '<div class="grid-list grid-3">';
+  for (var i = 0; i < r.data.length; i++) {
+    var s = r.data[i];
+    h += '<div class="item-card" draggable="true" data-id="' + s.id + '" data-order="' + (s.order_index || i) + '">';
+    h += '<img src="' + s.photo_url + '" alt="' + (s.name || '') + '" style="width:100%;height:160px;object-fit:cover">';
+    h += '<div class="body"><h4>' + (s.name || '') + '</h4><p>' + (s.role_en || '') + '</p></div>';
+    h += '<div class="actions">';
+    h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')">&#x270F;&#xFE0F; Edit</button>';
+    h += '<button class="btn btn-sm btn-danger" onclick="ds(\'' + s.id + '\',\'' + (s.photo_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
+    h += '</div></div>';
+  }
+  h += '</div>';
+  c.innerHTML = h;
+  setupDragDrop();
+}
+
+function setupDragDrop() {
+  var items = document.querySelectorAll('.item-card[draggable]');
+  items.forEach(function(el) {
+    el.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', this.dataset.id); this.classList.add('staff-dragging'); });
+    el.addEventListener('dragend', function() { this.classList.remove('staff-dragging'); });
+    el.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('staff-drag-over'); });
+    el.addEventListener('dragleave', function() { this.classList.remove('staff-drag-over'); });
+    el.addEventListener('drop', function(e) {
+      e.preventDefault(); this.classList.remove('staff-drag-over');
+      var dragId = e.dataTransfer.getData('text/plain');
+      var dropId = this.dataset.id;
+      if (dragId === dropId) return;
+      var all = document.querySelectorAll('.item-card[draggable]');
+      var ids = Array.from(all).map(function(x) { return x.dataset.id; });
+      var dragIdx = ids.indexOf(dragId);
+      var dropIdx = ids.indexOf(dropId);
+      if (dragIdx < 0 || dropIdx < 0) return;
+      var parent = this.parentNode;
+      var dragEl = parent.querySelector('[data-id="' + dragId + '"]');
+      if (dragIdx < dropIdx) { parent.insertBefore(dragEl, this.nextSibling); }
+      else { parent.insertBefore(dragEl, this); }
+      staffOrderChanged = true;
+      saveStaffOrder();
+    });
+  });
+}
+
+async function saveStaffOrder() {
+  if (!staffOrderChanged) return;
+  var items = document.querySelectorAll('.item-card[draggable]');
+  var updates = [];
+  items.forEach(function(el, i) { updates.push({ id: el.dataset.id, order_index: i }); });
+  for (var i = 0; i < updates.length; i++) {
+    await supabaseClient.from('staff').update({ order_index: updates[i].order_index }).eq('id', updates[i].id);
+  }
+  staffOrderChanged = false;
+}
+
+function ssf(id) {
+  currentAction = id ? 'edit' : 'add';
+  currentEditId = id;
+  currentSelectedFile = null;
+  var h = '<form id="sf">';
+  h += '<div class="form-row"><div class="form-group"><label>Name (EN) *</label><input class="form-control" id="sne" required></div>';
+  h += '<div class="form-group"><label>Name (GE) *</label><input class="form-control" id="sng" required></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label>Role (EN)</label><input class="form-control" id="sre"></div>';
+  h += '<div class="form-group"><label>Role (GE)</label><input class="form-control" id="srg"></div></div>';
+  h += '<div class="form-group"><label>Photo *</label><div id="sImageUpload"></div></div>';
+  h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
+  h += '<button class="btn btn-primary" type="submit">Save</button></div></form>';
+  om(id ? 'Edit Staff' : 'Add Staff');
+  document.getElementById('modalBody').innerHTML = h;
+  if (!id) {
+    document.getElementById('sImageUpload').appendChild(cfu(null, function(f) { currentSelectedFile = f; }));
+    document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
+  } else {
+    (async function() {
+      var r = await supabaseClient.from('staff').select('*').eq('id', id).single();
+      if (r.error || !r.data) { st('Error loading staff', 'error'); cm(); return; }
+      var s = r.data;
+      document.getElementById('sne').value = s.name || '';
+      document.getElementById('sng').value = s.name || '';
+      document.getElementById('sre').value = s.role_en || '';
+      document.getElementById('srg').value = s.role_ge || '';
+      document.getElementById('sImageUpload').appendChild(cfu(s.photo_url, function(f) { currentSelectedFile = f; }));
+      document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
+    })();
+  }
+}
+
+async function ss() {
+  var ne = document.getElementById('sne').value.trim();
+  var ng = document.getElementById('sng').value.trim();
+  if (!ne || !ng) { st('Name fields required', 'error'); return; }
+  if (!currentSelectedFile && currentAction === 'add') { st('Photo required', 'error'); return; }
+  try {
+    var iu = null;
+    if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
+    var d = { name: ne, role_en: document.getElementById('sre').value.trim(), role_ge: document.getElementById('srg').value.trim() };
+    if (iu) d.photo_url = iu;
+    var result;
+    if (currentAction === 'add') { d.order_index = 0; result = await supabaseClient.from('staff').insert(d); }
+    else { result = await supabaseClient.from('staff').update(d).eq('id', currentEditId); }
+    if (result.error) { st('Error: ' + result.error.message, 'error'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('staff'); }
+  } catch(e) { st('Error: ' + e.message, 'error'); }
+}
+
+function ds(id, iu) {
+  sc('Delete Staff?', 'This cannot be undone.', async function() {
+    await supabaseClient.from('staff').delete().eq('id', id);
+    if (iu) await di(iu);
+    st('Deleted!');
+    rs('staff');
+  });
+}
+
+// ============================================================
+// 4. TEAM PHOTOS
+// ============================================================
+async function rtp(c) {
+  var r = await supabaseClient.from('team_photos').select('*').order('created_at', { ascending: false });
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4F8;</div><p>No team photos yet.</p></div>'; return; }
+  var h = '<div class="grid-list grid-3">';
+  for (var i = 0; i < r.data.length; i++) {
+    var p = r.data[i];
+    h += '<div class="item-card">';
+    h += '<img src="' + p.image_url + '" alt="Team photo">';
+    h += '<div class="body"><p style="font-size:.8rem;color:var(--gray-500)">' + (p.caption || '') + '</p></div>';
+    h += '<div class="actions"><button class="btn btn-sm btn-danger" onclick="dtp(\'' + p.id + '\',\'' + (p.image_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button></div></div>';
+  }
+  h += '</div>';
+  c.innerHTML = h;
+}
+
+function stpf() {
+  currentSelectedFile = null;
+  var h = '<form id="tpf">';
+  h += '<div class="form-group"><label>Photo *</label><div id="tpImageUpload"></div></div>';
+  h += '<div class="form-group"><label>Caption</label><input class="form-control" id="tpc"></div>';
+  h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
+  h += '<button class="btn btn-primary" type="submit">Upload</button></div></form>';
+  om('Upload Team Photo');
+  document.getElementById('modalBody').innerHTML = h;
+  document.getElementById('tpImageUpload').appendChild(cfu(null, function(f) { currentSelectedFile = f; }));
+  document.getElementById('tpf').onsubmit = async function(e) {
+    e.preventDefault();
+    if (!currentSelectedFile) { st('Select a photo', 'error'); return; }
+    var btn = document.querySelector('#modalBody .btn-primary');
+    setL(btn, true);
+    try {
+      var iu = await ui(currentSelectedFile);
+      if (!iu) { setL(btn, false); return; }
+      var r = await supabaseClient.from('team_photos').insert({ image_url: iu, caption: document.getElementById('tpc').value.trim() || '' });
+      if (r.error) { st('Error: ' + r.error.message, 'error'); }
+      else { st('Uploaded!'); cm(); rs('team_photos'); }
+    } catch(e) { st('Error: ' + e.message, 'error'); }
+    setL(btn, false);
+  };
+}
+
+function dtp(id, iu) {
+  sc('Delete Photo?', 'This cannot be undone.', async function() {
+    await supabaseClient.from('team_photos').delete().eq('id', id);
+    if (iu) await di(iu);
+    st('Deleted!');
+    rs('team_photos');
+  });
+}
+
+// ============================================================
+// 5. MESSAGES
+// ============================================================
+async function rm(c) {
+  var r = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>'; return; }
+  var h = '';
+  for (var i = 0; i < r.data.length; i++) {
+    var m = r.data[i];
+    var d = new Date(m.created_at).toLocaleString();
+    h += '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
+    h += '<div class="msg-header"><span class="msg-name">' + (m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
+    h += '<div class="msg-preview">' + (m.email || '') + '</div>';
+    h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
+    h += '<div class="msg-actions">';
+    h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
+    h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
+    h += '</div></div>';
+  }
+  c.innerHTML = h;
+}
+
+function toggleMsg(el) { el.classList.toggle('expanded'); }
+
+async function mr(id) {
+  var el = document.querySelector('.message-item[data-id="' + id + '"]');
+  var isRead = !el.classList.contains('unread');
+  await supabaseClient.from('contact_messages').update({ is_read: !isRead }).eq('id', id);
+  el.classList.toggle('unread');
+  rs('messages');
+}
+
+async function dmsg(id) {
+  sc('Delete Message?', 'This cannot be undone.', async function() {
+    await supabaseClient.from('contact_messages').delete().eq('id', id);
+    st('Deleted!');
+    rs('messages');
+  });
+}
+
+// ============================================================
+// 6. CHATBOT KNOWLEDGE
+// ============================================================
+async function rcb(c) {
+  var r = await supabaseClient.from('chatbot_knowledge').select('*').order('updated_at', { ascending: false });
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  if (!r.data || !r.data.length) {
+    c.innerHTML = '<div class="card"><div class="card-header"><h4>Chatbot Knowledge Base (Markdown)</h4></div><div class="card-body"><textarea class="form-control knowledge-textarea" id="kbText"></textarea><div class="form-actions" style="margin-top:12px"><button class="btn btn-primary" id="kbSaveBtn">Create</button></div></div></div>';
+    document.getElementById('kbSaveBtn').onclick = async function() {
+      var btn = this; setL(btn, true);
+      try {
+        var r = await supabaseClient.from('chatbot_knowledge').insert({ content: document.getElementById('kbText').value });
+        if (r.error) { st('Error: ' + r.error.message, 'error'); } else { st('Created!'); rs('chatbot'); }
+      } catch(e) { st('Error: ' + e.message, 'error'); }
+      setL(btn, false);
+    };
+    return;
+  }
+  var kb = r.data[0];
+  var h = '<div class="card"><div class="card-header"><h4>Chatbot Knowledge Base (Markdown)</h4></div><div class="card-body">';
+  h += '<textarea class="form-control knowledge-textarea" id="kbText">' + (kb.content || '').replace(/</g, '<').replace(/>/g, '>') + '</textarea>';
+  h += '<div class="form-actions" style="margin-top:12px"><button class="btn btn-primary" id="kbSaveBtn">Save</button></div>';
+  h += '<p class="last-updated">Last updated: ' + new Date(kb.updated_at).toLocaleString() + '</p></div></div>';
+  c.innerHTML = h;
+  document.getElementById('kbSaveBtn').onclick = async function() {
+    var btn = this; setL(btn, true);
+    try {
+      var r = await supabaseClient.from('chatbot_knowledge').update({ content: document.getElementById('kbText').value }).eq('id', kb.id);
+      if (r.error) { st('Error: ' + r.error.message, 'error'); } else { st('Saved!'); rs('chatbot'); }
+    } catch(e) { st('Error: ' + e.message, 'error'); }
+    setL(btn, false);
+  };
+}
+
+// ============================================================
+// 7. SITE SETTINGS
+// ============================================================
+async function rset(c) {
+  var r = await supabaseClient.from('site_settings').select('*');
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  var s = (r.data && r.data.length) ? r.data[0] : { id: null, email: '', phone: '', address: '', mission_en: '', mission_ge: '', updated_at: null };
+  var esc = function(v) { return (v || '').replace(/"/g, '&quot;'); };
+  var h = '<div class="card"><div class="card-header"><h4>Site Settings</h4></div><div class="card-body">';
+  h += '<div class="settings-grid">';
+  h += '<div class="settings-section"><h4>Contact Info</h4>';
+  h += '<div class="form-group"><label>Email</label><input class="form-control" id="sEmail" value="' + esc(s.email) + '"></div>';
+  h += '<div class="form-group"><label>Phone</label><input class="form-control" id="sPhone" value="' + esc(s.phone) + '"></div>';
+  h += '<div class="form-group"><label>Address</label><input class="form-control" id="sAddress" value="' + esc(s.address) + '"></div>';
+  h += '</div><div class="settings-section"><h4>Mission Statement</h4>';
+  h += '<div class="form-group"><label>Mission (EN)</label><textarea class="form-control" id="sMissionEn" style="min-height:80px;">' + esc(s.mission_en) + '</textarea></div>';
+  h += '<div class="form-group"><label>Mission (GE)</label><textarea class="form-control" id="sMissionGe" style="min-height:80px;">' + esc(s.mission_ge) + '</textarea></div>';
+  h += '</div></div>';
+  h += '<div class="form-actions"><button class="btn btn-primary" id="sSaveBtn">Save Settings</button></div>';
+  if (s.updated_at) {
+    h += '<p class="last-updated">Last updated: ' + new Date(s.updated_at).toLocaleString() + '</p>';
+  }
+  h += '</div></div>';
+  c.innerHTML = h;
+  document.getElementById('sSaveBtn').onclick = async function() {
+    var btn = this; setL(btn, true);
+    try {
+      var data = {
+        email: document.getElementById('sEmail').value.trim(),
+        phone: document.getElementById('sPhone').value.trim(),
+        address: document.getElementById('sAddress').value.trim(),
+        mission_en: document.getElementById('sMissionEn').value.trim(),
+        mission_ge: document.getElementById('sMissionGe').value.trim(),
+        updated_at: new Date().toISOString()
+      };
+      var res;
+      if (s.id) {
+        res = await supabaseClient.from('site_settings').update(data).eq('id', s.id);
+      } else {
+        res = await supabaseClient.from('site_settings').insert(data);
+      }
+      if (res.error) { st('Error: ' + res.error.message, 'error'); } else { st('Settings saved!'); rs('settings'); }
+    } catch(e) { st('Error: ' + e.message, 'error'); }
+    setL(btn, false);
+  };
+}
+
+// Aliases for minified function names used by appended code sections
+function st(m,t) { showToast(m,t); }
+function cm() { closeModal(); }
+function om(t) { openModal(t); }
+function rs(s) { renderSection(s); }
+async function ui(f) { return uploadImage(f); }
+async function di(u) { deleteImage(u); }
+function sc(t,m,c) { showConfirm(t,m,c); }
+function cfu(u,f) { return createFileUpload(u,f); }
+function setL(b,l) { setLoading(b,l); }
+</script>
+</body>
+</html>
