@@ -126,9 +126,7 @@
     <div class="login-error" id="loginError">Incorrect password</div>
     <input type="password" id="loginPassword" placeholder="Enter password" autofocus>
     <button class="btn btn-primary" id="loginBtn">Sign In</button>
-    <div style="margin-top:12px">
-      <button class="btn btn-sm btn-secondary" id="quickLoginBtn">Quick Login</button>
-    </div>
+
   </div>
 </div>
 <div id="app" class="hidden">
@@ -139,6 +137,7 @@
   <div class="sidebar-nav">
     <button class="sidebar-item active" data-section="articles"><span class="icon">&#x1F4DD;</span><span>Articles</span></button>
     <button class="sidebar-item" data-section="roses"><span class="icon">&#x1F339;</span><span>Rose Catalog</span></button>
+    <button class="sidebar-item" data-section="adr_roses"><span class="icon">&#x1F339;</span><span>ADR Roses</span></button>
     <button class="sidebar-item" data-section="staff"><span class="icon">&#x1F465;</span><span>Staff</span></button>
     <button class="sidebar-item" data-section="team_photos"><span class="icon">&#x1F4F8;</span><span>Team Photos</span></button>
     <button class="sidebar-item" data-section="messages"><span class="icon">&#x2709;&#xFE0F;</span><span>Messages</span><span class="badge" id="unreadBadge" style="display:none">0</span></button>
@@ -192,11 +191,14 @@ let currentEditId = null;
 let confirmCallback = null;
 let unreadCount = 0;
 let currentSelectedFile = null;
+let contentImagesList = [];
+let originalBannerUrl = '';
 let staffOrderChanged = false;
-var sectionNames = { articles:'Articles', roses:'Rose Catalog', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
+let allStaffMembers = [];
+var sectionNames = { articles:'Articles', roses:'Rose Catalog', adr_roses:'ADR Roses', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
 
 document.getElementById('loginBtn').addEventListener('click', handleLogin);
-document.getElementById('quickLoginBtn').addEventListener('click', function() { document.getElementById('loginPassword').value = 'Edugarden!2026'; handleLogin(); });
+
 document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('logoutBtnSidebar').addEventListener('click', handleLogout);
 document.getElementById('logoutBtnHeader').addEventListener('click', handleLogout);
@@ -265,9 +267,11 @@ function switchSection(section) {
 function handleSectionAction() {
   if (currentSection === 'articles') showArticleForm();
   else if (currentSection === 'roses') srf();
+  else if (currentSection === 'adr_roses') sadrf();
   else if (currentSection === 'staff') ssf();
   else if (currentSection === 'team_photos') stpf();
 }
+
 
 function createFileUpload(currentUrl, onFileSelect) {
   var wrapper = document.createElement('div');
@@ -314,6 +318,7 @@ function renderSection(section) {
   var content = document.getElementById('sectionContent'); showLoading(content);
   if (section === 'articles') renderArticles(content);
   else if (section === 'roses') rr(content);
+  else if (section === 'adr_roses') radr(content);
   else if (section === 'staff') rsf(content);
   else if (section === 'team_photos') rtp(content);
   else if (section === 'messages') rm(content);
@@ -323,11 +328,7 @@ function renderSection(section) {
 }
 function setLoading(btn, loading) { if (loading) { btn.classList.add('loading'); btn.disabled = true; } else { btn.classList.remove('loading'); btn.disabled = false; } }
 
-if (sessionStorage.getItem('edugarden_admin') === 'logged_in') {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  initApp();
-}
+
 
 // ============================================================
 // 1. ARTICLES
@@ -342,7 +343,8 @@ async function renderArticles(container) {
     var date = new Date(a.created_at).toLocaleDateString();
     var preview = (a.content_en || a.content_ge || '').substring(0, 80);
     html += '<div class="item-card">';
-    if (a.image_url) { html += '<img src="' + a.image_url + '" alt="' + (a.title_en || '') + '">'; }
+    var mainImg = a.image_url ? a.image_url.split(',')[0].trim() : '';
+    if (mainImg) { html += '<img src="' + mainImg + '" alt="' + (a.title_en || '') + '">'; }
     else { html += '<div style="height:160px;background:var(--gray-200);display:flex;align-items:center;justify-content:center;color:var(--gray-500);">&#x1F4DD; No Image</div>'; }
     html += '<div class="body"><h4>' + (a.title_en || 'Untitled') + '</h4>';
     html += '<p>' + preview + (preview.length >= 80 ? '...' : '') + '</p>';
@@ -355,63 +357,200 @@ async function renderArticles(container) {
   html += '</div>';
   container.innerHTML = html;
 }
+
+function renderContentImages() {
+  var container = document.getElementById('articleContentImagesContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
+  container.style.gap = '12px';
+  container.style.marginTop = '8px';
+
+  contentImagesList.forEach(function(img, index) {
+    var imgWrapper = document.createElement('div');
+    imgWrapper.style.position = 'relative';
+    imgWrapper.style.width = '100px';
+    imgWrapper.style.height = '100px';
+    imgWrapper.style.borderRadius = '6px';
+    imgWrapper.style.border = '1px solid var(--gray-300)';
+    imgWrapper.style.overflow = 'hidden';
+
+    var imgSrc = img.type === 'url' ? img.value : img.localUrl;
+    
+    var elImg = document.createElement('img');
+    elImg.src = imgSrc;
+    elImg.style.width = '100%';
+    elImg.style.height = '100%';
+    elImg.style.objectFit = 'cover';
+    imgWrapper.appendChild(elImg);
+
+    var deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = '&times;';
+    deleteBtn.type = 'button';
+    deleteBtn.style.position = 'absolute';
+    deleteBtn.style.top = '4px';
+    deleteBtn.style.right = '4px';
+    deleteBtn.style.background = 'var(--red)';
+    deleteBtn.style.color = 'white';
+    deleteBtn.style.border = 'none';
+    deleteBtn.style.width = '20px';
+    deleteBtn.style.height = '20px';
+    deleteBtn.style.borderRadius = '50%';
+    deleteBtn.style.cursor = 'pointer';
+    deleteBtn.style.fontSize = '12px';
+    deleteBtn.style.display = 'flex';
+    deleteBtn.style.alignItems = 'center';
+    deleteBtn.style.justifyContent = 'center';
+    deleteBtn.onclick = function() {
+      contentImagesList.splice(index, 1);
+      renderContentImages();
+    };
+    imgWrapper.appendChild(deleteBtn);
+    container.appendChild(imgWrapper);
+  });
+
+  var addBtn = document.createElement('div');
+  addBtn.style.width = '100px';
+  addBtn.style.height = '100px';
+  addBtn.style.borderRadius = '6px';
+  addBtn.style.border = '2px dashed var(--gray-400)';
+  addBtn.style.display = 'flex';
+  addBtn.style.flexDirection = 'column';
+  addBtn.style.alignItems = 'center';
+  addBtn.style.justifyContent = 'center';
+  addBtn.style.cursor = 'pointer';
+  addBtn.style.color = 'var(--gray-500)';
+  addBtn.style.fontSize = '24px';
+  addBtn.innerHTML = '+<span style="font-size: 10px; margin-top: 4px;">Add Photo</span>';
+  
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.style.display = 'none';
+  fileInput.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      contentImagesList.push({
+        type: 'file',
+        value: file,
+        localUrl: ev.target.result
+      });
+      renderContentImages();
+    };
+    reader.readAsDataURL(file);
+  };
+  addBtn.onclick = function() { fileInput.click(); };
+  addBtn.appendChild(fileInput);
+  container.appendChild(addBtn);
+}
+
 function showArticleForm(id) {
   currentAction = id ? 'edit' : 'add'; currentEditId = id; currentSelectedFile = null;
   if (!id) {
+    contentImagesList = [];
+    originalBannerUrl = '';
     var html = '<form id="articleForm">';
     html += '<div class="form-row"><div class="form-group"><label>Title (EN) <span class="required">*</span></label><input class="form-control" id="article_title_en" required></div>';
     html += '<div class="form-group"><label>Title (GE) <span class="required">*</span></label><input class="form-control" id="article_title_ge" required></div></div>';
     html += '<div class="form-group"><label>Content (EN) <span class="required">*</span></label><textarea class="form-control" id="article_content_en" required></textarea></div>';
     html += '<div class="form-group"><label>Content (GE) <span class="required">*</span></label><textarea class="form-control" id="article_content_ge" required></textarea></div>';
-    html += '<div class="form-group"><label>Image</label><div id="articleImageUpload"></div></div>';
+    html += '<div class="form-group"><label>Banner Image</label><div id="articleImageUpload"></div></div>';
+    html += '<div class="form-group"><label>Content Images (Shown in expanded view)</label><div id="articleContentImagesContainer"></div></div>';
     html += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="closeModal()">Cancel</button><button class="btn btn-primary" type="submit" id="articleSaveBtn">Save</button></div></form>';
     openModal('Add Article'); document.getElementById('modalBody').innerHTML = html;
     document.getElementById('articleImageUpload').appendChild(createFileUpload(null, function(f) { currentSelectedFile = f; }));
+    renderContentImages();
     document.getElementById('articleForm').onsubmit = function(e) { e.preventDefault(); saveArticle(); };
   } else {
     (async function() {
       var r = await supabaseClient.from('articles').select('*').eq('id', id).single();
       if (r.error || !r.data) { showToast('Error loading article', 'error'); closeModal(); return; }
       var a = r.data;
+      originalBannerUrl = a.image_url ? a.image_url.split(',')[0].trim() : '';
+      contentImagesList = (a.image_url && a.image_url.includes(',')) ? a.image_url.split(',').slice(1).map(function(url) { return { type: 'url', value: url.trim() }; }) : [];
+      
       var html = '<form id="articleForm">';
-      html += '<div class="form-row"><div class="form-group"><label>Title (EN) <span class="required">*</span></label><input class="form-control" id="article_title_en" value="' + (a.title_en||'').replace(/"/g,'"') + '" required></div>';
-      html += '<div class="form-group"><label>Title (GE) <span class="required">*</span></label><input class="form-control" id="article_title_ge" value="' + (a.title_ge||'').replace(/"/g,'"') + '" required></div></div>';
-      html += '<div class="form-group"><label>Content (EN) <span class="required">*</span></label><textarea class="form-control" id="article_content_en" required>' + (a.content_en||'').replace(/</g,'<').replace(/>/g,'>') + '</textarea></div>';
-      html += '<div class="form-group"><label>Content (GE) <span class="required">*</span></label><textarea class="form-control" id="article_content_ge" required>' + (a.content_ge||'').replace(/</g,'<').replace(/>/g,'>') + '</textarea></div>';
-      html += '<div class="form-group"><label>Image</label><div id="articleImageUpload"></div></div>';
+      html += '<div class="form-row"><div class="form-group"><label>Title (EN) <span class="required">*</span></label><input class="form-control" id="article_title_en" value="' + (a.title_en||'').replace(/"/g,'&quot;') + '" required></div>';
+      html += '<div class="form-group"><label>Title (GE) <span class="required">*</span></label><input class="form-control" id="article_title_ge" value="' + (a.title_ge||'').replace(/"/g,'&quot;') + '" required></div></div>';
+      html += '<div class="form-group"><label>Content (EN) <span class="required">*</span></label><textarea class="form-control" id="article_content_en" required>' + (a.content_en||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>';
+      html += '<div class="form-group"><label>Content (GE) <span class="required">*</span></label><textarea class="form-control" id="article_content_ge" required>' + (a.content_ge||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>';
+      html += '<div class="form-group"><label>Banner Image</label><div id="articleImageUpload"></div></div>';
+      html += '<div class="form-group"><label>Content Images (Shown in expanded view)</label><div id="articleContentImagesContainer"></div></div>';
       html += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="closeModal()">Cancel</button><button class="btn btn-primary" type="submit" id="articleSaveBtn">Save</button></div></form>';
       openModal('Edit Article'); document.getElementById('modalBody').innerHTML = html;
-      document.getElementById('articleImageUpload').appendChild(createFileUpload(a.image_url, function(f) { currentSelectedFile = f; }));
+      document.getElementById('articleImageUpload').appendChild(createFileUpload(originalBannerUrl, function(f) { currentSelectedFile = f; }));
+      renderContentImages();
       document.getElementById('articleForm').onsubmit = function(e) { e.preventDefault(); saveArticle(); };
     })();
   }
 }
 
 async function saveArticle() {
-    var te = (document.getElementById('ate') || document.getElementById('article_title_en')).value.trim();
-    var tg = (document.getElementById('atg') || document.getElementById('article_title_ge')).value.trim();
-    var ce = (document.getElementById('ace') || document.getElementById('article_content_en')).value.trim();
-    var cg = (document.getElementById('acg') || document.getElementById('article_content_ge')).value.trim();
+  var te = (document.getElementById('ate') || document.getElementById('article_title_en')).value.trim();
+  var tg = (document.getElementById('atg') || document.getElementById('article_title_ge')).value.trim();
+  var ce = (document.getElementById('ace') || document.getElementById('article_content_en')).value.trim();
+  var cg = (document.getElementById('acg') || document.getElementById('article_content_ge')).value.trim();
   if (!te || !tg || !ce || !cg) { st('Fill all required fields', 'error'); return; }
+  
+  var btn = document.getElementById('articleSaveBtn');
+  setL(btn, true);
   try {
-    var iu = null;
-    if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
-    var d = { title_en: te, title_ge: tg, content_en: ce, content_ge: cg };
-    if (iu) d.image_url = iu;
+    var bannerUrl = originalBannerUrl;
+    if (currentSelectedFile) {
+      bannerUrl = await ui(currentSelectedFile);
+      if (!bannerUrl) { setL(btn, false); return; }
+    }
+    
+    var contentUrls = [];
+    for (var i = 0; i < contentImagesList.length; i++) {
+      var item = contentImagesList[i];
+      if (item.type === 'url') {
+        contentUrls.push(item.value);
+      } else if (item.type === 'file') {
+        var uploadedUrl = await ui(item.value);
+        if (uploadedUrl) {
+          contentUrls.push(uploadedUrl);
+        } else {
+          setL(btn, false);
+          return;
+        }
+      }
+    }
+    
+    var allImages = [];
+    if (bannerUrl) allImages.push(bannerUrl);
+    allImages = allImages.concat(contentUrls);
+    
+    var d = {
+      title_en: te,
+      title_ge: tg,
+      content_en: ce,
+      content_ge: cg,
+      image_url: allImages.join(',')
+    };
+    
     var r;
     if (currentAction === 'add') { r = await supabaseClient.from('articles').insert(d); }
     else { r = await supabaseClient.from('articles').update(d).eq('id', currentEditId); }
     if (r.error) { st('Error: ' + r.error.message, 'error'); }
     else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('articles'); }
   } catch(e) { st('Error: ' + e.message, 'error'); }
+  setL(btn, false);
 }
-
 
 // Delete article
 function da(id, iu) {
   sc('Delete Article?', 'This cannot be undone.', async function() {
     await supabaseClient.from('articles').delete().eq('id', id);
-    if (iu) await di(iu);
+    if (iu) {
+      var urls = iu.split(',');
+      for (var i = 0; i < urls.length; i++) {
+        if (urls[i]) await di(urls[i].trim());
+      }
+    }
     st('Deleted!');
     rs('articles');
   });
@@ -423,7 +562,7 @@ function da(id, iu) {
 async function rr(c) {
   var r = await supabaseClient.from('roses').select('*');
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
-  if (r.data) { r.data.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); }); }
+  if (r.data) { r.data = r.data.filter(function(x) { return x.type_en !== 'ADR'; }).sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); }); }
   if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F339;</div><p>No roses yet.</p></div>'; return; }
   var h = '<div class="grid-list grid-3">';
   for (var i = 0; i < r.data.length; i++) {
@@ -485,7 +624,7 @@ async function sr() {
   try {
     var iu = null;
     if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
-    var d = { name: ne, description_en: document.getElementById('rde').value.trim(), description_ge: document.getElementById('rdg').value.trim() };
+    var d = { name: ne, description_en: document.getElementById('rde').value.trim(), description_ge: document.getElementById('rdg').value.trim(), type_en: 'Standard', type_ge: 'Standard' };
     if (iu) d.image_url = iu;
     var result;
     if (currentAction === 'add') { result = await supabaseClient.from('roses').insert(d); }
@@ -506,24 +645,150 @@ async function dr(id, iu) {
 }
 
 // ============================================================
+// 2B. ADR ROSES
+// ============================================================
+async function radr(c) {
+  var r = await supabaseClient.from('roses').select('*');
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  if (r.data) { r.data = r.data.filter(function(x) { return x.type_en === 'ADR'; }).sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); }); }
+  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F339;</div><p>No ADR roses yet.</p></div>'; return; }
+  var h = '<div class="grid-list grid-3">';
+  for (var i = 0; i < r.data.length; i++) {
+    var ro = r.data[i];
+    var pr = (ro.description_en || ro.description_ge || '').substring(0, 80);
+    h += '<div class="item-card">';
+    if (ro.image_url) { h += '<img src="' + ro.image_url + '" alt="' + (ro.name || '') + '">'; }
+    else { h += '<div style="height:160px;background:var(--gray-200);display:flex;align-items:center;justify-content:center;color:var(--gray-500);">&#x1F339; No Image</div>'; }
+    h += '<div class="body"><h4>' + (ro.name || 'Unnamed') + '</h4><p>' + pr + (pr.length >= 80 ? '...' : '') + '</p></div>';
+    h += '<div class="actions"><button class="btn btn-sm btn-primary" onclick="sadrf(\'' + ro.id + '\')">&#x270F;&#xFE0F; Edit</button>';
+    h += '<button class="btn btn-sm btn-danger" onclick="dadr(\'' + ro.id + '\',\'' + (ro.image_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button></div></div>';
+  }
+  h += '</div>';
+  c.innerHTML = h;
+}
+
+function sadrf(id) {
+  currentAction = id ? 'edit' : 'add';
+  currentEditId = id;
+  currentSelectedFile = null;
+  var h = '<form id="adrf">';
+  h += '<div class="form-row"><div class="form-group"><label>Name (EN) *</label><input class="form-control" id="adr_rne" required></div>';
+  h += '<div class="form-group"><label>Name (GE) *</label><input class="form-control" id="adr_rng" required></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label>Desc (EN)</label><textarea class="form-control" id="adr_rde"></textarea></div>';
+  h += '<div class="form-group"><label>Desc (GE)</label><textarea class="form-control" id="adr_rdg"></textarea></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label>Height (cm, e.g., 70-90)</label><input class="form-control" id="adr_rh"></div>';
+  h += '<div class="form-group"><label>Width (cm, e.g., 85-105)</label><input class="form-control" id="adr_rw"></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label>Breeder (e.g., Kordes)</label><input class="form-control" id="adr_rb"></div>';
+  h += '<div class="form-group"><label>Year (e.g., 2021)</label><input class="form-control" id="adr_ry"></div></div>';
+  h += '<div class="form-group"><label>Image</label><div id="adrRoseImageUpload"></div></div>';
+  h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
+  h += '<button class="btn btn-primary" type="submit">Save</button></div></form>';
+  om(id ? 'Edit ADR Rose' : 'Add ADR Rose');
+  document.getElementById('modalBody').innerHTML = h;
+  
+  if (!id) {
+    document.getElementById('adrRoseImageUpload').appendChild(cfu(null, function(f) { currentSelectedFile = f; }));
+    document.getElementById('adrf').onsubmit = function(e) { e.preventDefault(); sadr(); };
+  } else {
+    (async function() {
+      var r = await supabaseClient.from('roses').select('*').eq('id', id).single();
+      if (r.error || !r.data) { st('Error loading rose', 'error'); cm(); return; }
+      var ro = r.data;
+      document.getElementById('adr_rne').value = ro.name || '';
+      document.getElementById('adr_rng').value = ro.name || '';
+      document.getElementById('adr_rde').value = ro.description_en || '';
+      document.getElementById('adr_rdg').value = ro.description_ge || '';
+      document.getElementById('adr_rh').value = ro.height || '';
+      document.getElementById('adr_rw').value = ro.width || '';
+      document.getElementById('adr_rb').value = ro.breeder || '';
+      document.getElementById('adr_ry').value = ro.year || '';
+      document.getElementById('adrRoseImageUpload').appendChild(cfu(ro.image_url, function(f) { currentSelectedFile = f; }));
+      document.getElementById('adrf').onsubmit = function(e) { e.preventDefault(); sadr(); };
+    })();
+  }
+}
+
+async function sadr() {
+  var ne = document.getElementById('adr_rne').value.trim();
+  var ng = document.getElementById('adr_rng').value.trim();
+  if (!ne || !ng) { st('Name fields required', 'error'); return; }
+  try {
+    var iu = null;
+    if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
+    var d = {
+      name: ne,
+      description_en: document.getElementById('adr_rde').value.trim(),
+      description_ge: document.getElementById('adr_rdg').value.trim(),
+      height: document.getElementById('adr_rh').value.trim(),
+      width: document.getElementById('adr_rw').value.trim(),
+      breeder: document.getElementById('adr_rb').value.trim(),
+      year: document.getElementById('adr_ry').value.trim(),
+      type_en: 'ADR',
+      type_ge: 'ADR'
+    };
+    if (iu) d.image_url = iu;
+    var result;
+    if (currentAction === 'add') { result = await supabaseClient.from('roses').insert(d); }
+    else { result = await supabaseClient.from('roses').update(d).eq('id', currentEditId); }
+    if (result.error) { st('Error: ' + result.error.message, 'error'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('adr_roses'); }
+  } catch(e) { st('Error: ' + e.message, 'error'); }
+}
+
+async function dadr(id, iu) {
+  sc('Delete ADR Rose?', 'This cannot be undone.', async function() {
+    await supabaseClient.from('roses').delete().eq('id', id);
+    if (iu) await di(iu);
+    st('Deleted!');
+    rs('adr_roses');
+  });
+}
+
+// ============================================================
 // 3. STAFF
 // ============================================================
 async function rsf(c) {
   var r = await supabaseClient.from('staff').select('*').order('order_index', { ascending: true });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
-  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F465;</div><p>No staff yet.</p></div>'; return; }
-  var h = '<div class="grid-list grid-3">';
-  for (var i = 0; i < r.data.length; i++) {
-    var s = r.data[i];
-    h += '<div class="item-card" draggable="true" data-id="' + s.id + '" data-order="' + (s.order_index || i) + '">';
-    h += '<img src="' + s.photo_url + '" alt="' + (s.name || '') + '" style="width:100%;height:160px;object-fit:cover">';
-    h += '<div class="body"><h4>' + (s.name || '') + '</h4><p>' + (s.role_en || '') + '</p></div>';
-    h += '<div class="actions">';
-    h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')">&#x270F;&#xFE0F; Edit</button>';
-    h += '<button class="btn btn-sm btn-danger" onclick="ds(\'' + s.id + '\',\'' + (s.photo_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
+  allStaffMembers = r.data || [];
+  if (!allStaffMembers.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F465;</div><p>No staff yet.</p></div>'; return; }
+  
+  // Group staff by their role
+  const groups = {};
+  const roleOrder = [];
+  allStaffMembers.forEach(member => {
+    const rawRole = member.role_en || '';
+    const roleKey = rawRole.split('|')[0].trim() || 'Other';
+    if (!groups[roleKey]) {
+      groups[roleKey] = [];
+      roleOrder.push(roleKey);
+    }
+    groups[roleKey].push(member);
+  });
+
+  var h = '';
+  roleOrder.forEach(roleKey => {
+    h += '<div class="staff-group-panel" style="background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);padding:24px 32px;margin-bottom:32px;border:1.5px solid rgba(0,0,0,0.04);">';
+    h += '<h3 style="font-size:1.25rem;font-weight:700;color:var(--green-dark);margin-bottom:20px;padding-bottom:8px;border-bottom:2px solid var(--green-light);display:inline-block;">' + roleKey + '</h3>';
+    h += '<div class="staff-group-cards" style="display:flex;flex-wrap:wrap;gap:16px;">';
+    
+    groups[roleKey].forEach(s => {
+      var roleParts = (s.role_en || '').split('|');
+      var roleName = roleParts[0] || '';
+      h += '<div class="admin-staff-card item-card" draggable="true" data-id="' + s.id + '" data-order="' + (s.order_index || 0) + '" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f7f7f9;border-radius:16px;border:1px solid rgba(0,0,0,0.03);width:320px;max-width:100%;box-sizing:border-box;transition:transform 0.2s, box-shadow 0.2s;">';
+      h += '<img src="' + s.photo_url + '" alt="' + (s.name || '') + '" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);">';
+      h += '<div class="admin-staff-info" style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">';
+      h += '<h4 style="font-size:0.95rem;font-weight:700;color:var(--green-dark);margin-bottom:2px;overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + (s.name || '') + '</h4>';
+      h += '<p style="font-size:0.8rem;color:var(--gray-600);overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + roleName + '</p>';
+      h += '</div>';
+      h += '<div class="admin-staff-actions" style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:auto;">';
+      h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--green);color:#fff;">Edit</button>';
+      h += '<button class="btn btn-sm btn-danger" onclick="ds(\'' + s.id + '\',\'' + (s.photo_url || '') + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--red);color:#fff;">Delete</button>';
+      h += '</div></div>';
+    });
+    
     h += '</div></div>';
-  }
-  h += '</div>';
+  });
   c.innerHTML = h;
   setupDragDrop();
 }
@@ -570,16 +835,84 @@ function ssf(id) {
   currentAction = id ? 'edit' : 'add';
   currentEditId = id;
   currentSelectedFile = null;
+  
+  // Dynamically build list of roles, default to only Founder
+  var uniqueRolesEn = ['Founder'];
+  var uniqueRolesGe = ['დამფუძნებელი'];
+
+  // Load custom roles from localStorage
+  try {
+    var savedEn = JSON.parse(localStorage.getItem('edugarden_custom_roles_en') || '[]');
+    savedEn.forEach(function(r) {
+      if (r && uniqueRolesEn.indexOf(r) === -1) uniqueRolesEn.push(r);
+    });
+    var savedGe = JSON.parse(localStorage.getItem('edugarden_custom_roles_ge') || '[]');
+    savedGe.forEach(function(r) {
+      if (r && uniqueRolesGe.indexOf(r) === -1) uniqueRolesGe.push(r);
+    });
+  } catch(e) {}
+  
+  // Also collect existing roles from active database records
+  allStaffMembers.forEach(function(member) {
+    var roleEn = (member.role_en || '').split('|')[0].trim();
+    if (roleEn && uniqueRolesEn.indexOf(roleEn) === -1) {
+      uniqueRolesEn.push(roleEn);
+    }
+    
+    var roleGe = (member.role_ge || '').split('|')[0].trim();
+    if (roleGe && uniqueRolesGe.indexOf(roleGe) === -1) {
+      uniqueRolesGe.push(roleGe);
+    }
+  });
+
   var h = '<form id="sf">';
   h += '<div class="form-row"><div class="form-group"><label>Name (EN) *</label><input class="form-control" id="sne" required></div>';
   h += '<div class="form-group"><label>Name (GE) *</label><input class="form-control" id="sng" required></div></div>';
-  h += '<div class="form-row"><div class="form-group"><label>Role (EN)</label><input class="form-control" id="sre"></div>';
-  h += '<div class="form-group"><label>Role (GE)</label><input class="form-control" id="srg"></div></div>';
+  
+  h += '<div class="form-row"><div class="form-group"><label>Role Category (EN)</label>';
+  h += '<select class="form-control" id="sre_cat">';
+  uniqueRolesEn.forEach(function(role) {
+    h += '<option value="' + role + '">' + role + '</option>';
+  });
+  h += '<option value="Other">Other (Custom)</option>';
+  h += '</select>';
+  h += '<input class="form-control" id="sre_custom" style="display:none; margin-top: 8px;" placeholder="Type custom role">';
+  h += '</div>';
+  
+  h += '<div class="form-group"><label>Role Category (GE)</label>';
+  h += '<select class="form-control" id="srg_cat">';
+  uniqueRolesGe.forEach(function(role) {
+    var label = role;
+    if (role === 'დამფუძნებელი') label = 'დამფუძნებელი (Founder)';
+    h += '<option value="' + role + '">' + label + '</option>';
+  });
+  h += '<option value="Other">Other (სხვა)</option>';
+  h += '</select>';
+  h += '<input class="form-control" id="srg_custom" style="display:none; margin-top: 8px;" placeholder="ჩაწერეთ სხვა როლი">';
+  h += '</div></div>';
+  
+  h += '<div class="form-row"><div class="form-group"><label>Bio / Extra Info (EN)</label><textarea class="form-control" id="s_bio_en" placeholder="Bio for expanded view"></textarea></div>';
+  h += '<div class="form-group"><label>Bio / Extra Info (GE)</label><textarea class="form-control" id="s_bio_ge" placeholder="ბიოგრაფია გაფართოებული ხედისთვის"></textarea></div></div>';
+  
   h += '<div class="form-group"><label>Photo *</label><div id="sImageUpload"></div></div>';
   h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
   h += '<button class="btn btn-primary" type="submit">Save</button></div></form>';
+  
   om(id ? 'Edit Staff' : 'Add Staff');
   document.getElementById('modalBody').innerHTML = h;
+  
+  var sreCat = document.getElementById('sre_cat');
+  var sreCustom = document.getElementById('sre_custom');
+  sreCat.onchange = function() {
+    sreCustom.style.display = this.value === 'Other' ? 'block' : 'none';
+  };
+  
+  var srgCat = document.getElementById('srg_cat');
+  var srgCustom = document.getElementById('srg_custom');
+  srgCat.onchange = function() {
+    srgCustom.style.display = this.value === 'Other' ? 'block' : 'none';
+  };
+  
   if (!id) {
     document.getElementById('sImageUpload').appendChild(cfu(null, function(f) { currentSelectedFile = f; }));
     document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
@@ -590,8 +923,34 @@ function ssf(id) {
       var s = r.data;
       document.getElementById('sne').value = s.name || '';
       document.getElementById('sng').value = s.name || '';
-      document.getElementById('sre').value = s.role_en || '';
-      document.getElementById('srg').value = s.role_ge || '';
+      
+      var partsEn = (s.role_en || '').split('|');
+      var roleEn = partsEn[0] || '';
+      var bioEn = partsEn[1] || '';
+      
+      var partsGe = (s.role_ge || '').split('|');
+      var roleGe = partsGe[0] || '';
+      var bioGe = partsGe[1] || '';
+      
+      if (uniqueRolesEn.indexOf(roleEn) !== -1) {
+        sreCat.value = roleEn;
+      } else {
+        sreCat.value = 'Other';
+        sreCustom.value = roleEn;
+        sreCustom.style.display = 'block';
+      }
+      
+      if (uniqueRolesGe.indexOf(roleGe) !== -1) {
+        srgCat.value = roleGe;
+      } else {
+        srgCat.value = 'Other';
+        srgCustom.value = roleGe;
+        srgCustom.style.display = 'block';
+      }
+      
+      document.getElementById('s_bio_en').value = bioEn;
+      document.getElementById('s_bio_ge').value = bioGe;
+      
       document.getElementById('sImageUpload').appendChild(cfu(s.photo_url, function(f) { currentSelectedFile = f; }));
       document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
     })();
@@ -606,7 +965,39 @@ async function ss() {
   try {
     var iu = null;
     if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
-    var d = { name: ne, role_en: document.getElementById('sre').value.trim(), role_ge: document.getElementById('srg').value.trim() };
+    
+    var sreCat = document.getElementById('sre_cat').value;
+    var roleEn = sreCat === 'Other' ? document.getElementById('sre_custom').value.trim() : sreCat;
+    var bioEn = document.getElementById('s_bio_en').value.trim();
+    
+    var srgCat = document.getElementById('srg_cat').value;
+    var roleGe = srgCat === 'Other' ? document.getElementById('srg_custom').value.trim() : srgCat;
+    var bioGe = document.getElementById('s_bio_ge').value.trim();
+    
+    // Save custom role to localStorage to save as reusable defaults
+    if (sreCat === 'Other' && roleEn) {
+      try {
+        var savedEn = JSON.parse(localStorage.getItem('edugarden_custom_roles_en') || '[]');
+        if (savedEn.indexOf(roleEn) === -1) {
+          savedEn.push(roleEn);
+          localStorage.setItem('edugarden_custom_roles_en', JSON.stringify(savedEn));
+        }
+      } catch(e) {}
+    }
+    if (srgCat === 'Other' && roleGe) {
+      try {
+        var savedGe = JSON.parse(localStorage.getItem('edugarden_custom_roles_ge') || '[]');
+        if (savedGe.indexOf(roleGe) === -1) {
+          savedGe.push(roleGe);
+          localStorage.setItem('edugarden_custom_roles_ge', JSON.stringify(savedGe));
+        }
+      } catch(e) {}
+    }
+
+    var fullRoleEn = roleEn + '|' + bioEn;
+    var fullRoleGe = roleGe + '|' + bioGe;
+    
+    var d = { name: ne, role_en: fullRoleEn, role_ge: fullRoleGe };
     if (iu) d.photo_url = iu;
     var result;
     if (currentAction === 'add') { d.order_index = 0; result = await supabaseClient.from('staff').insert(d); }
@@ -636,9 +1027,8 @@ async function rtp(c) {
   for (var i = 0; i < r.data.length; i++) {
     var p = r.data[i];
     h += '<div class="item-card">';
-    h += '<img src="' + p.image_url + '" alt="Team photo">';
-    h += '<div class="body"><p style="font-size:.8rem;color:var(--gray-500)">' + (p.caption || '') + '</p></div>';
-    h += '<div class="actions"><button class="btn btn-sm btn-danger" onclick="dtp(\'' + p.id + '\',\'' + (p.image_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button></div></div>';
+    h += '<img src="' + (p.photo_url || '') + '" alt="Team photo">';
+    h += '<div class="actions"><button class="btn btn-sm btn-danger" onclick="dtp(\'' + p.id + '\',\'' + (p.photo_url || '') + '\')">&#x1F5D1;&#xFE0F; Delete</button></div></div>';
   }
   h += '</div>';
   c.innerHTML = h;
@@ -648,7 +1038,6 @@ function stpf() {
   currentSelectedFile = null;
   var h = '<form id="tpf">';
   h += '<div class="form-group"><label>Photo *</label><div id="tpImageUpload"></div></div>';
-  h += '<div class="form-group"><label>Caption</label><input class="form-control" id="tpc"></div>';
   h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
   h += '<button class="btn btn-primary" type="submit">Upload</button></div></form>';
   om('Upload Team Photo');
@@ -662,7 +1051,7 @@ function stpf() {
     try {
       var iu = await ui(currentSelectedFile);
       if (!iu) { setL(btn, false); return; }
-      var r = await supabaseClient.from('team_photos').insert({ image_url: iu, caption: document.getElementById('tpc').value.trim() || '' });
+      var r = await supabaseClient.from('team_photos').insert({ photo_url: iu });
       if (r.error) { st('Error: ' + r.error.message, 'error'); }
       else { st('Uploaded!'); cm(); rs('team_photos'); }
     } catch(e) { st('Error: ' + e.message, 'error'); }

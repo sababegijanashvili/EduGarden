@@ -699,4 +699,272 @@ header {
       .page-header { margin-bottom: 12px; }
       .footer-contact, .footer-info, .footer-copyright { font-size: 0.85rem; }
     }
+
+    /* ========== STAFF SECTION ========== */
+    .staff-section {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 16px;
+      box-sizing: border-box;
+    }
+    .staff-group-panel {
+      background: var(--white);
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(178,64,96,0.05), 0 2px 8px rgba(0,0,0,0.02);
+      padding: 24px 32px;
+      margin-bottom: 32px;
+      border: 1.5px solid rgba(178,64,96,0.06);
+      animation: var(--scale-in);
+    }
+    .staff-group-header {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--rose);
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid rgba(178,64,96,0.1);
+      display: inline-block;
+    }
+    .staff-group-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .staff-compact-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 18px;
+      background: #f7f7f9;
+      border-radius: 16px;
+      width: 250px;
+      max-width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(0,0,0,0.03);
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .staff-compact-card:hover {
+      transform: translateY(-2px);
+      background: #f1f1f5;
+      box-shadow: 0 4px 12px rgba(178,64,96,0.08);
+    }
+    .staff-compact-photo {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      object-fit: cover;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .staff-compact-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      flex: 1;
+    }
+    .staff-compact-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--rose);
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.2;
+    }
+    .staff-compact-role {
+      font-size: 0.8rem;
+      color: #666;
+      font-weight: 500;
+      white-space: normal;
+      word-break: break-word;
+      margin-top: 4px;
+      line-height: 1.2;
+    }
+    
+    .staff-compact-card.has-bio {
+      cursor: pointer;
+    }
+    
+    .staff-card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+    }
+    
+    /* XenForo Style Staff Popover */
+    .staff-popover {
+      position: absolute;
+      z-index: 10000;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.08);
+      width: 350px;
+      max-width: calc(100vw - 20px);
+      padding: 16px;
+      box-sizing: border-box;
+      animation: popover-fade-in 0.2s ease-out;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    @keyframes popover-fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    /* Popover Arrow */
+    .staff-popover::after {
+      content: "";
+      position: absolute;
+      bottom: -8px;
+      left: var(--arrow-left, 50%);
+      transform: translateX(-50%);
+      border-width: 8px 8px 0;
+      border-style: solid;
+      border-color: var(--white) transparent transparent;
+      display: block;
+      width: 0;
+      z-index: 1;
+    }
+    
+    .staff-popover::before {
+      content: "";
+      position: absolute;
+      bottom: -9px;
+      left: var(--arrow-left, 50%);
+      transform: translateX(-50%);
+      border-width: 9px 9px 0;
+      border-style: solid;
+      border-color: rgba(0,0,0,0.1) transparent transparent;
+      display: block;
+      width: 0;
+      z-index: 0;
+    }
+    
+    .staff-popover-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 12px;
+    }
+    
+    .staff-popover-avatar-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      border: 2px solid var(--rose);
+      padding: 2px;
+      background: var(--white);
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    
+    .staff-popover-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+    
+    .staff-popover-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
+      flex: 1;
+    }
+    
+    .staff-popover-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--rose);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    
+    .staff-popover-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    
+    .staff-popover-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--white);
+      letter-spacing: 0.5px;
+    }
+    
+    .staff-popover-badge.staff-member-badge {
+      background: var(--rose);
+    }
+    
+    .staff-popover-badge.role-badge {
+      background: #8d6e63;
+    }
+    
+    .staff-popover-subtext {
+      font-size: 0.75rem;
+      color: #777;
+      margin-top: 2px;
+    }
+    
+    .staff-popover-bio {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #333;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      padding-top: 12px;
+      margin-top: 4px;
+      text-align: justify;
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    /* XenForo Style Stats Footer */
+    .staff-popover-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid rgba(0,0,0,0.06);
+      margin-top: 12px;
+      padding-top: 12px;
+      text-align: center;
+    }
+    
+    .staff-popover-stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .staff-popover-stat-item:not(:last-child) {
+      border-right: 1px solid rgba(0,0,0,0.06);
+    }
+    
+    .staff-popover-stat-label {
+      font-size: 0.7rem;
+      color: #888;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    
+    .staff-popover-stat-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #333;
+    }
   

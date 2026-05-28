@@ -723,4 +723,66 @@ header {
           color:#074b23;
         
         }
+        
+        /* ========== COMPACT CATALOG CARDS ========== */
+        .catalog-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 24px;
+          justify-content: center;
+          margin: 0 auto;
+          max-width: 1200px;
+          padding: 24px 16px;
+          animation: var(--fade-in);
+        }
+        .rose-card {
+          background: var(--white);
+          border-radius: 20px;
+          box-shadow: 0 4px 16px rgba(178,64,96,0.08);
+          padding: 20px 16px;
+          max-width: 280px;
+          min-width: 200px;
+          flex: 1 1 220px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          border: 1.5px solid rgba(178,64,96,0.06);
+          margin-bottom: 16px;
+          transition: box-shadow 0.3s, border 0.3s, transform 0.2s;
+          animation: var(--scale-in);
+        }
+        .rose-card:hover {
+          box-shadow: 0 8px 32px rgba(178,64,96,0.12);
+          border-color: #f3e6ea;
+          transform: scale(1.02);
+        }
+        .rose-img {
+          width: 100%;
+          height: 140px;
+          object-fit: cover;
+          border-radius: 16px;
+          margin-bottom: 12px;
+          background: #eee;
+          box-shadow: 0 2px 12px rgba(178,64,96,0.08);
+        }
+        .rose-name {
+          font-size: 1.05rem;
+          font-weight: 600;
+          color: #B24060;
+          margin-bottom: 6px;
+          text-align: center;
+        }
+        .rose-type {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #9BCB94;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .rose-desc {
+          font-size: 0.9rem;
+          color: #555;
+          text-align: center;
+        }
       

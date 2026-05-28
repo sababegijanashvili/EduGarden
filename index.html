@@ -1,13 +1,16 @@
-          <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ka">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EduGarden | Social Entrepreneurship for a Sustainable Future</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Noto+Sans+Georgian:wght@400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Noto+Sans+Georgian:wght@400;700&display=swap"
+    rel="stylesheet">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  
-    <link rel="stylesheet" href="css/base.css">
+
+  <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/navbar.css">
   <link rel="stylesheet" href="css/hero.css">
   <link rel="stylesheet" href="css/about.css">
@@ -16,17 +19,21 @@
   <link rel="stylesheet" href="css/articles.css">
   <link rel="stylesheet" href="css/contact.css">
 </head>
+
 <body class="georgian">
   <header>
     <div class="logo-square">
       <img src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="EduGarden Logo" />
     </div>
-    <div class="brand-text" style="font-family: 'Poppins', 'Noto Sans Georgian', sans-serif; font-weight:700; font-size:1.6rem; color:var(--rose); letter-spacing:1px; margin-right:32px; margin-left:112px; user-select:none;">EduGarden</div>
+    <div class="brand-text"
+      style="font-family: 'Poppins', 'Noto Sans Georgian', sans-serif; font-weight:700; font-size:1.6rem; color:var(--rose); letter-spacing:1px; margin-right:32px; margin-left:112px; user-select:none;">
+      EduGarden</div>
     <nav aria-label="Main Navigation">
       <a href="#" data-translate="nav_home" class="active" onclick="showPage('home')">Home</a>
       <a href="#" data-translate="nav_catalog" onclick="showPage('catalog')">Catalog</a>
       <a href="#" data-translate="nav_adr" onclick="showPage('adr')">ADR Roses</a>
       <a href="#" data-translate="nav_articles" onclick="showPage('articles')">Articles</a>
+      <a href="#" data-translate="nav_staff" onclick="showPage('staff')">Staff</a>
       <a href="#" data-translate="nav_contact" onclick="showPage('contact')">Contact</a>
     </nav>
     <div class="lang-switch" aria-label="Language Switcher">
@@ -40,44 +47,65 @@
       <div class="hero">
         <div class="hero-content">
           <div class="hero-title" data-translate="home_title">Welcome to EduGarden</div>
-          <div class="hero-subtitle" data-translate="home_subtitle">Social Entrepreneurship for a Sustainable Future</div>
+          <div class="hero-subtitle" data-translate="home_subtitle">Social Entrepreneurship for a Sustainable Future
+          </div>
           <button class="hero-btn" data-translate="home_learn" onclick="showPage('mission-details')">Learn More</button>
         </div>
       </div>
       <section id="mission">
-        <div class="bubble-title-wrapper"><span class="bubble-title" data-translate="mission_title">More Info</span></div>
+        <div class="bubble-title-wrapper"><span class="bubble-title" data-translate="mission_title">More Info</span>
+        </div>
         <div class="mission-cards">
           <div class="card">
-            <a href="https://www.google.com/maps/place/%E1%83%92%E1%83%9D%E1%83%A0%E1%83%98%E1%83%A1+%E2%84%968+%E1%83%A1%E1%83%90%E1%83%AF%E1%83%90%E1%83%A0%E1%83%9D+%E1%83%A1%E1%83%99%E1%83%9D%E1%83%9A%E1%83%90/@41.9798124,44.1189636,655m/data=!3m1!1e3!4m6!3m5!1s0x40449c1bc2bb1b8d:0xa4f6f9dd2ba385a2!8m2!3d41.9798084!4d44.1215385!16s%2Fg%2F11cs6kt7lk?entry=tts&g_ep=EgoyMDI1MDYzMC4wIPu8ASoASAFQAw%3D%3D&skid=13bad7fc-ad8a-4d21-9ba0-910f7f3d7009" target="_blank" style="text-decoration:none;">
-              <img src="https://i.postimg.cc/L6T8QG52/Annotation-2025-07-05-124229.png" alt="EduGarden Location Map" onerror="this.src='https://via.placeholder.com/340x160?text=Map'" />
+            <a href="https://www.google.com/maps/place/%E1%83%92%E1%83%9D%E1%83%A0%E1%83%98%E1%83%A1+%E2%84%968+%E1%83%A1%E1%83%90%E1%83%AF%E1%83%90%E1%83%A0%E1%83%9D+%E1%83%A1%E1%83%99%E1%83%9D%E1%83%9A%E1%83%90/@41.9798124,44.1189636,655m/data=!3m1!1e3!4m6!3m5!1s0x40449c1bc2bb1b8d:0xa4f6f9dd2ba385a2!8m2!3d41.9798084!4d44.1215385!16s%2Fg%2F11cs6kt7lk?entry=tts&g_ep=EgoyMDI1MDYzMC4wIPu8ASoASAFQAw%3D%3D&skid=13bad7fc-ad8a-4d21-9ba0-910f7f3d7009"
+              target="_blank" style="text-decoration:none;">
+              <img src="https://i.postimg.cc/L6T8QG52/Annotation-2025-07-05-124229.png" alt="EduGarden Location Map"
+                onerror="this.src='https://via.placeholder.com/340x160?text=Map'" />
               <div class="card-title" data-translate="mission_location_title">Location</div>
-              <div class="card-desc" data-translate="mission_location_desc">Our enterprise is located at 45 Petriashvili St, Gori, Georgia, next to Gori N8 Public School. The site is convenient for both locals and visitors, and helps promote environmental education in the region.</div>
+              <div class="card-desc" data-translate="mission_location_desc">Our enterprise is located at 45 Petriashvili
+                St, Gori, Georgia, next to Gori N8 Public School. The site is convenient for both locals and visitors,
+                and helps promote environmental education in the region.</div>
             </a>
           </div>
           <div class="card">
-            <img src="https://i.postimg.cc/901Kjdsg/image.png" alt="EU Funding Logo" onerror="this.src='https://via.placeholder.com/340x160?text=EU'" />
+            <img src="https://i.postimg.cc/901Kjdsg/image.png" alt="EU Funding Logo"
+              onerror="this.src='https://via.placeholder.com/340x160?text=EU'" />
             <div class="card-title" data-translate="mission_finance_title">Finance</div>
-            <div class="card-desc" data-translate="mission_finance_desc">The project is co-funded by the European Union. Project partner organizations are: Childfund Deutschland E.V. (Germany), Entrepreneurship School (Ukraine), NGO 'Vesta' (Moldova), ECOVISIO (Moldova), CODE Social Entrepreneurship Hub (Armenia), Center for Economic Development and Support (Georgia)</div>
+            <div class="card-desc" data-translate="mission_finance_desc">The project is co-funded by the European Union.
+              Project partner organizations are: Childfund Deutschland E.V. (Germany), Entrepreneurship School
+              (Ukraine), NGO 'Vesta' (Moldova), ECOVISIO (Moldova), CODE Social Entrepreneurship Hub (Armenia), Center
+              for Economic Development and Support (Georgia)</div>
           </div>
           <div class="card">
-            <img src="https://i.postimg.cc/9Xdr7L35/photo-1564277872723-f2b4203eb061.avif" alt="ADR Certified Rose" onerror="this.src='https://via.placeholder.com/340x160?text=Rose'" />
+            <img src="https://i.postimg.cc/9Xdr7L35/photo-1564277872723-f2b4203eb061.avif" alt="ADR Certified Rose"
+              onerror="this.src='https://via.placeholder.com/340x160?text=Rose'" />
             <div class="card-title" data-translate="mission_adr_title">ADR Roses</div>
-            <div class="card-desc" data-translate="mission_adr_desc">ADR roses are strong, healthy, and bloom beautifully. They grow without chemicals and rarely get sick. They are tested in Germany.</div>
+            <div class="card-desc" data-translate="mission_adr_desc">ADR roses are strong, healthy, and bloom
+              beautifully. They grow without chemicals and rarely get sick. They are tested in Germany.</div>
           </div>
         </div>
       </section>
       <div class="team-bubble"><span id="team-bubble-text">Our Team</span></div>
       <div class="team-slider" id="photo-slider">
         <button class="slider-arrow left" aria-label="Previous" onclick="sliderPrev()">&#8592;</button>
-        <img src="https://i.postimg.cc/s27yD4HT/508169835-23895923333360813-8061243371952174111-n.jpg" alt="Slide 1" class="slider-img active" />
-        <img src="https://i.postimg.cc/L6YtXqRJ/505189859-1124542789697088-2276860014764962200-n.jpg" alt="Slide 2" class="slider-img" />
-        <img src="https://i.postimg.cc/nhKQjBWh/504935489-2477129755972064-6432430428670200337-n.jpg" alt="Slide 3" class="slider-img" />
-        <img src="https://i.postimg.cc/Bb1jqKDs/504407941-2477129775972062-4570756569178418137-n.jpg" alt="Slide 4" class="slider-img" />
-        <img src="https://i.postimg.cc/s2hfGrx9/503485816-23896223823323124-7124551829005975839-n.jpg" alt="Slide 6" class="slider-img" />
-        <img src="https://i.postimg.cc/7ZznB5QF/508012645-23895910650028748-5374261132610574698-n.jpg" alt="Slide 7" class="slider-img" />
-        <img src="https://i.postimg.cc/13kxZKcC/518311798-24124635453822932-1679221572965788087-n.jpg" alt="Slide 8" class="slider-img" />
-        <img src="https://i.postimg.cc/VLhpjFTf/518350378-24124641413822336-8626206444506939577-n.jpg" alt="Slide 9" class="slider-img" />
-        <img src="https://i.postimg.cc/prpkTwPD/517780524-24124629837156827-8420992604332891790-n.jpg" alt="Slide 10" class="slider-img" />
+        <img src="https://i.postimg.cc/s27yD4HT/508169835-23895923333360813-8061243371952174111-n.jpg" alt="Slide 1"
+          class="slider-img active" />
+        <img src="https://i.postimg.cc/L6YtXqRJ/505189859-1124542789697088-2276860014764962200-n.jpg" alt="Slide 2"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/nhKQjBWh/504935489-2477129755972064-6432430428670200337-n.jpg" alt="Slide 3"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/Bb1jqKDs/504407941-2477129775972062-4570756569178418137-n.jpg" alt="Slide 4"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/s2hfGrx9/503485816-23896223823323124-7124551829005975839-n.jpg" alt="Slide 6"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/7ZznB5QF/508012645-23895910650028748-5374261132610574698-n.jpg" alt="Slide 7"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/13kxZKcC/518311798-24124635453822932-1679221572965788087-n.jpg" alt="Slide 8"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/VLhpjFTf/518350378-24124641413822336-8626206444506939577-n.jpg" alt="Slide 9"
+          class="slider-img" />
+        <img src="https://i.postimg.cc/prpkTwPD/517780524-24124629837156827-8420992604332891790-n.jpg" alt="Slide 10"
+          class="slider-img" />
         <img src="https://i.postimg.cc/PrcjpfM7/image.png" alt="Slide 11" class="slider-img" />
         <button class="slider-arrow right" aria-label="Next" onclick="sliderNext()">&#8594;</button>
         <div class="slider-dots" id="slider-dots"></div>
@@ -95,84 +123,67 @@
     <!-- ADR Roses Page -->
     <section id="adr" class="page-section hidden">
       <!-- Clean Hero Section -->
-      <div class="adr-hero-container" style="position:relative;display:flex;align-items:center;justify-content:center;min-height:360px;padding:64px 24px;border-radius:32px;overflow:hidden;margin-bottom:40px;background:url('https://i.postimg.cc/Fz6W18Nt/photo-1690829309936-f6ec3fd95b98.avif') center/cover no-repeat;">
+      <div class="adr-hero-container"
+        style="position:relative;display:flex;align-items:center;justify-content:center;min-height:360px;padding:64px 24px;border-radius:32px;overflow:hidden;margin-bottom:40px;background:url('https://i.postimg.cc/Fz6W18Nt/photo-1690829309936-f6ec3fd95b98.avif') center/cover no-repeat;">
         <!-- Dark overlay for text readability -->
         <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1;"></div>
         <!-- Hero content -->
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#ffffff;padding:0 24px;width:100%;max-width:900px;z-index:2;">
-          <h1 style="font-size:3.2rem;font-weight:800;margin-bottom:16px;letter-spacing:1px;text-shadow:2px 2px 8px rgba(0,0,0,0.8);color:#ffffff !important;line-height:1.2;" data-translate="adr_title">ADR<br>სერტიფიცირებული<br>ვარდები</h1>
+        <div
+          style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#ffffff;padding:0 24px;width:100%;max-width:900px;z-index:2;">
+          <h1
+            style="font-size:3.2rem;font-weight:800;margin-bottom:16px;letter-spacing:1px;text-shadow:2px 2px 8px rgba(0,0,0,0.8);color:#ffffff !important;line-height:1.2;"
+            data-translate="adr_title">ADR<br>სერტიფიცირებული<br>ვარდები</h1>
 
         </div>
       </div>
-      
-      <!-- ADR Description Section -->
-      <div class="adr-description" style="max-width:900px;margin:0 auto 48px auto;padding:0 24px;font-size:1.1rem;line-height:1.7;color:#333;font-weight:600;white-space:pre-line;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,0.05);" data-translate="adr_subtitle"></div>
-      
 
-      <div class="adr-grid">
-        <div class="adr-card" tabindex="0">
-          <div class="adr-badge" data-translate="adr_badge">ADR</div>
-          <img src="https://i.postimg.cc/ZqxC9w6B/caracho.jpg" alt="CARACHO ADR Rose" />
-          <div class="adr-title" data-translate="adr_caracho_title">CARACHO</div>
-          <div class="adr-desc" data-translate="adr_caracho_desc">შრაბი
-ალისფერი -წითელი გვირვინები ვერცხლისფერი რევერსითა და ფურცლების თავისუფალი განლაგებით. მსუბუქი არომატით.
-მუქი მწვანე, ნახევრადპრიალა ფოთლებით.
-სიმაღლე: 70-90 სმ
-სიგანე: 85-105 სმ
-სელექციონერი: Kordes
-წელი: 2021</div>
-        </div>
-        <div class="adr-card" tabindex="0">
-          <div class="adr-badge" data-translate="adr_badge">ADR</div>
-          <img src="https://i.postimg.cc/4ymMMNG6/02-rose-coral-lions-181201-origin-img.jpg" alt="CORAL LIONS-ROSE ADR Rose" />
-          <div class="adr-title" data-translate="adr_coral_title">CORAL LIONS-ROSE</div>
-          <div class="adr-desc" data-translate="adr_coral_desc">ფლორიბუნდა
-გარგრისფერ-ნარინჯისფერი გვირგვინი მოვარდისფრო კიდეებით.
-პრიალა მწვანე ფოთლებით
-სიმაღლე: 90-110 სმ
-სიგნე: 85-105 სმ
-სელექციონერი: Kordes 
-წელი: 2019</div>
-        </div>
-        <div class="adr-card" tabindex="0">
-          <div class="adr-badge" data-translate="adr_badge">ADR</div>
-          <img src="https://i.postimg.cc/8zNC2qFF/Meine-Rose-kopie.jpg" alt="MEINE ROSE ADR Rose" />
-          <div class="adr-title" data-translate="adr_meine_title">MEINE ROSE</div>
-          <div class="adr-desc" data-translate="adr_meine_desc">ჩაის ჰიბრიდი
-ნაზი ვარდისფერი, მსუბუქი სურნელით, მუქი მწვანე ნახევრადპრილა ფოთლებით, მოწითალო კოკორით.
-სიმაღლე: 95-115სმ
-სიგანე:90-110
-სელექციონერი: Kordes
- წელი: 2021</div>
-        </div>
-        </div>
+      <!-- ADR Description Section -->
+      <div class="adr-description"
+        style="max-width:900px;margin:0 auto 48px auto;padding:0 24px;font-size:1.1rem;line-height:1.7;color:#333;font-weight:600;white-space:pre-line;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,0.05);"
+        data-translate="adr_subtitle"></div>
+
+
+      <div class="adr-grid" id="adr-grid"></div>
       </div>
     </section>
+    <!-- Staff Page -->
+    <section id="staff" class="page-section hidden">
+      <div class="page-header">
+        <div class="page-title" data-translate="staff_title">Our Team</div>
+        <div class="page-subtitle" data-translate="staff_subtitle">Meet the people behind EduGarden</div>
+      </div>
+      <div id="staff-section" class="staff-section"></div>
+    </section>
     <!-- Articles Page -->
-      
+
     <section id="articles" class="page-section hidden">
       <div class="page-header">
         <div class="page-title" data-translate="articles_title">Articles</div>
-        <div class="page-subtitle" data-translate="articles_subtitle">Read our latest articles on sustainable gardening.</div>
+        <div class="page-subtitle" data-translate="articles_subtitle">Read our latest articles on sustainable gardening.
+        </div>
       </div>
-      
+
       <div class="articles-grid">
         <!-- Article 1: Compost Bin -->
         <article class="article-card" data-article="compost">
-          <img class="article-preview-image" src="https://i.postimg.cc/qpRpybtT/518311798-24124635453822932-1679221572965788087-n.jpg" alt="Compost Bin" />
+          <img class="article-preview-image"
+            src="https://i.postimg.cc/qpRpybtT/518311798-24124635453822932-1679221572965788087-n.jpg"
+            alt="Compost Bin" />
           <div class="article-card-content">
             <div class="article-meta">
-              <img class="article-avatar" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="EduGarden" />
+              <img class="article-avatar" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png"
+                alt="EduGarden" />
               <div class="article-author">EduGarden</div>
               <div class="article-date" data-translate="article1_date">July 1, 2025</div>
             </div>
             <h3 class="article-title" data-translate="article1_title">Compost Bin</h3>
-            <p class="article-preview-text" data-translate="article1_preview">We now have a compost bin in the educational garden! Thanks to Kona organization and Ana Kovalova...</p>
+            <p class="article-preview-text" data-translate="article1_preview">We now have a compost bin in the
+              educational garden! Thanks to Kona organization and Ana Kovalova...</p>
             <a href="#" class="read-more-btn" data-translate="learn_more">Read More</a>
           </div>
         </article>
       </div>
-      
+
       <!-- Article Modal for Expanded View -->
       <div class="article-modal" id="articleModal">
         <div class="article-modal-content">
@@ -182,7 +193,8 @@
           </div>
           <div class="article-modal-body">
             <div class="article-modal-meta">
-              <img class="article-modal-avatar" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="EduGarden" />
+              <img class="article-modal-avatar" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png"
+                alt="EduGarden" />
               <div>
                 <div class="article-modal-author">EduGarden</div>
                 <div class="article-modal-date" id="modalDate"></div>
@@ -194,7 +206,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Lightbox for Full-Size Image View -->
       <div class="lightbox" id="imageLightbox">
         <div class="lightbox-content">
@@ -202,7 +214,7 @@
           <button class="lightbox-close" id="closeLightbox">&times;</button>
         </div>
       </div>
-      
+
     </section>
 
     <!-- Article Details Page -->
@@ -213,9 +225,11 @@
       </div>
       <div class="article-content" data-translate="article1_full">
         <p>საგანმანათლებლო ბაღში საკომპოსტე ყუთი გვაქვს! 🥬🥦🥕</p>
-        <p>მადლობა ორგანიზაცია Kona • კონა და ანა კოვალოვა, აგრარული უნივერსიტეტის სტუდენტებს, რომლებმაც ჩვენი მოსწავლეებისთვის საინფორმაციო შეხვედრაც გამართეს. 🥰</p>
+        <p>მადლობა ორგანიზაცია Kona • კონა და ანა კოვალოვა, აგრარული უნივერსიტეტის სტუდენტებს, რომლებმაც ჩვენი
+          მოსწავლეებისთვის საინფორმაციო შეხვედრაც გამართეს. 🥰</p>
         <p>სექტემბრიდან ჩვენი ვარდებისთვის ორგანულ სასუქსაც დავამზადებთ. 🌹🌷⚘️</p>
-        <p>განსაკუთრებული მადლობა ჩემს კოლეგა-მეგობრებს, რომლებმაც ორგანული ნარჩენის პირველი "დონაცია" გააკეთეს! 😊🥰</p>
+        <p>განსაკუთრებული მადლობა ჩემს კოლეგა-მეგობრებს, რომლებმაც ორგანული ნარჩენის პირველი "დონაცია" გააკეთეს! 😊🥰
+        </p>
         <div class="card-images">
           <img src="https://i.postimg.cc/ZWNDYYBD/compost1.jpg" alt="Compost photo 1">
           <img src="https://i.postimg.cc/8JXbBxf6/compost2.jpg" alt="Compost photo 2">
@@ -224,7 +238,7 @@
         </div>
       </div>
       <script>
-        document.getElementById('article-back-btn').addEventListener('click',()=>showPage('articles'));
+        document.getElementById('article-back-btn').addEventListener('click', () => showPage('articles'));
       </script>
     </section>
 
@@ -237,7 +251,7 @@
         <div class="page-title" data-translate="contact_title">Contact Us</div>
         <div class="page-subtitle" data-translate="contact_subtitle">We'd love to hear from you!</div>
       </div>
-      <form class="contact-form" autocomplete="off" onsubmit="event.preventDefault(); alert('Message sent!');">
+      <form class="contact-form" autocomplete="off">
         <label class="form-label" for="name" data-translate="contact_name">Name</label>
         <input class="form-input" id="name" name="name" type="text" placeholder="Your Name" required />
         <label class="form-label" for="email" data-translate="contact_email">Email</label>
@@ -250,13 +264,21 @@
     <!-- Mission Details Page -->
     <section id="mission-details" class="page-section hidden">
       <div class="mission-details-hero">
-        <img src="https://i.postimg.cc/ydfKLR1L/495369071-122096524376871161-3757085341799905912-n.jpg" alt="EduGarden Mission" class="mission-details-img" />
+        <img src="https://i.postimg.cc/ydfKLR1L/495369071-122096524376871161-3757085341799905912-n.jpg"
+          alt="EduGarden Mission" class="mission-details-img" />
         <div class="mission-details-bubble">
           <span class="mission-details-title" data-translate="mission_details_title">Mission Details</span>
         </div>
       </div>
       <div class="mission-details-content" data-translate="mission_details_desc">
-        EduGarden-ის მისიაა თემში შექმნას ისეთი ინკლუზიური საგანმანათლებლო გარემო, სადაც თითოეულ ადამიანს ექნება შესაძლებლობა, მონაწილეობა მიიღოს ეკოლოგიური მებაღეობის პროცესში, განავითაროს საკუთარი პოტენციალი და შეიტანოს წვლილი საზოგადოების კეთილდღეობაში. დაეხმარება მომხმარებლებს სწორად შეარჩიონ მიმზიდველი და ჯანსაღი მცენარეები. ასეთი ჯიშების შერჩევა ამცირებს მათი მოვლის ხარჯებს, პესტიციდების გამოყენებას, ზოგავს რესურსებს, ხელს უწყობს გარემოს დაცვასა და ეკოსისტემის ჯანსაღად შენარჩუნებას. საწარმო ხელს შეუწყობს გარემოს მიმართ მდგრადი მცენარეების გამრავლებას. ჩვენ გვჯერა, რომ EduGarden-ი გახდება ინკლუზიური მებაღეობის „ჰაბი“, სადაც სხვადასხვა ასაკისა და შესაძლებლობის მქონე ადამიანები ერთად სწავლობენ, ავითარებენ ბუნებრივი და ინოვაციური მებაღეობის მეთოდებს, თითოეულ მონაწილეს შეაქვს წვლილი ეკოსისტემის მდგრად განვითარებასა და ეკოლოგიური პასუხისმგებლობის გაძლიერებაში.
+        EduGarden-ის მისიაა თემში შექმნას ისეთი ინკლუზიური საგანმანათლებლო გარემო, სადაც თითოეულ ადამიანს ექნება
+        შესაძლებლობა, მონაწილეობა მიიღოს ეკოლოგიური მებაღეობის პროცესში, განავითაროს საკუთარი პოტენციალი და შეიტანოს
+        წვლილი საზოგადოების კეთილდღეობაში. დაეხმარება მომხმარებლებს სწორად შეარჩიონ მიმზიდველი და ჯანსაღი მცენარეები.
+        ასეთი ჯიშების შერჩევა ამცირებს მათი მოვლის ხარჯებს, პესტიციდების გამოყენებას, ზოგავს რესურსებს, ხელს უწყობს
+        გარემოს დაცვასა და ეკოსისტემის ჯანსაღად შენარჩუნებას. საწარმო ხელს შეუწყობს გარემოს მიმართ მდგრადი მცენარეების
+        გამრავლებას. ჩვენ გვჯერა, რომ EduGarden-ი გახდება ინკლუზიური მებაღეობის „ჰაბი“, სადაც სხვადასხვა ასაკისა და
+        შესაძლებლობის მქონე ადამიანები ერთად სწავლობენ, ავითარებენ ბუნებრივი და ინოვაციური მებაღეობის მეთოდებს, თითოეულ
+        მონაწილეს შეაქვს წვლილი ეკოსისტემის მდგრად განვითარებასა და ეკოლოგიური პასუხისმგებლობის გაძლიერებაში.
       </div>
     </section>
   </main>
@@ -272,12 +294,18 @@
         <span class="badge-value">edugarden8@gmail.com</span>
       </div>
     </div>
-    <div class="footer-copyright" id="footer-copyright" data-translate="footer_copyright">© 2025 EduGarden. All rights reserved. | Social Entrepreneurship for a Sustainable Future</div>
+    <div class="footer-copyright" id="footer-copyright" data-translate="footer_copyright">© 2025 EduGarden. All rights
+      reserved. | Social Entrepreneurship for a Sustainable Future</div>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/language.js"></script>
   <script src="js/catalog.js"></script>
   <script src="js/slider.js"></script>
   <script src="js/articles.js"></script>
   <script src="js/contact.js"></script>
+  <script src="js/staff.js"></script>
+  <div id="toast-container"></div>
 </body>
+
 </html>

@@ -1,184 +1,241 @@
+// js/articles.js – Dynamic Articles rendering from Supabase and Modal Expansion
+// Uses global window.supabaseClient and currentLang
+
+let allArticles = [];
+let currentArticleOpen = null;
+
+const articleImages = {
+  compost: [
+    'https://i.postimg.cc/13kxZKcC/518311798-24124635453822932-1679221572965788087-n.jpg',
+    'https://i.postimg.cc/PdXkgkvY/518316442-24124630400490104-5393785229401845256-n.jpg',
+    'https://i.postimg.cc/9m73dms5/519670010-24124630790490065-4571032062583763630-n.jpg',
+    'https://i.postimg.cc/s2WnhXxT/image.png',
+    'https://i.postimg.cc/ZJ4TJd29/518940920-24124623547157456-1018382966899199927-n.jpg'
+  ]
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-          const modal = document.getElementById('articleModal');
-          const closeModal = document.getElementById('closeModal');
-          const articleCards = document.querySelectorAll('.article-card');
+  loadAndRenderArticles();
+  setupModalEventListeners();
+});
 
-          // Images per article (shared for all languages)
-          const articleImages = {
-            compost: [
-              'https://i.postimg.cc/13kxZKcC/518311798-24124635453822932-1679221572965788087-n.jpg',
-              'https://i.postimg.cc/PdXkgkvY/518316442-24124630400490104-5393785229401845256-n.jpg',
-              'https://i.postimg.cc/9m73dms5/519670010-24124630790490065-4571032062583763630-n.jpg',
-              'https://i.postimg.cc/s2WnhXxT/image.png',
-              'https://i.postimg.cc/ZJ4TJd29/518940920-24124623547157456-1018382966899199927-n.jpg'
-            ]
-          };
+function loadAndRenderArticles() {
+  const container = document.querySelector('.articles-grid');
+  if (!container) return;
 
-          // Track currently opened article to re-render on language switch
-          let currentArticleOpen = null;
+  // Ensure supabase client is ready
+  if (!window.supabaseClient) {
+    setTimeout(loadAndRenderArticles, 100);
+    return;
+  }
 
-          function buildArticleData(articleType) {
-            if (articleType === 'compost') {
-              return {
-                title: translations[currentLang]['article1_title'] || '—',
-                date: translations[currentLang]['article1_date'] || '',
-                content: translations[currentLang]['article1_full'] || '',
-                images: articleImages.compost
-              };
-            }
-            return null;
-          }
+  container.innerHTML = '<div class="spinner"></div>';
 
-          function renderModal(data) {
-            if (!data) return;
-            const modalImg = document.getElementById('modalImage');
-            const headerEl = document.querySelector('.article-modal-header');
-            modalImg.src = data.images[0];
-            modalImg.alt = data.title;
-            // Improve clarity: avoid contrast/brightness filters that can soften images
-            modalImg.style.filter = '';
-            // Hint browser to prioritize this image without layout changes
-            modalImg.loading = 'eager';
-            modalImg.decoding = 'async';
-            modalImg.setAttribute('fetchpriority', 'high');
+  window.supabaseClient
+    .from('articles')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .then(({ data, error }) => {
+      if (error) {
+        container.innerHTML = `<p class="empty-state">Error loading articles: ${error.message}</p>`;
+        return;
+      }
+      allArticles = data || [];
+      if (allArticles.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">\u2639</div><p>No articles yet.</p></div>`;
+        return;
+      }
+      renderArticles(allArticles);
+    });
+}
 
-            // After load, avoid upscaling which causes blur
-            modalImg.onload = () => {
-              const headerWidth = headerEl.clientWidth || 800;
-              const nW = modalImg.naturalWidth || 0;
-              const nH = modalImg.naturalHeight || 0;
-              if (nW && nH) {
-                if (nW < headerWidth) {
-                  // Would upscale -> use contain and set appropriate header height
-                  const scale = headerWidth / nW;
-                  const scaledH = Math.min(300, Math.round(nH * scale));
-                  headerEl.style.height = scaledH + 'px';
-                  modalImg.style.objectFit = 'contain';
-                } else {
-                  // Plenty of resolution -> use cover at 300px height
-                  headerEl.style.height = '300px';
-                  modalImg.style.objectFit = 'cover';
-                }
-              }
-            };
+function renderArticles(articles) {
+  const container = document.querySelector('.articles-grid');
+  let html = '';
+  articles.forEach(a => {
+    const title = (window.currentLang || 'ge') === 'ge' ? a.title_ge : a.title_en;
+    const content = (window.currentLang || 'ge') === 'ge' ? a.content_ge : a.content_en;
+    const date = new Date(a.created_at).toLocaleDateString();
+    const img = a.image_url ? a.image_url.split(',')[0].trim() : '';
+    
+    // Add semantic article class and markup exactly like the original HTML to prevent layout deformation
+    html += `
+      <article class="article-card" data-article="${a.id}" style="cursor: pointer;" onclick="openArticleModal('${a.id}')">
+        ${img ? `<img class="article-preview-image" src="${img}" alt="${title}">` : ''}
+        <div class="article-card-content">
+          <div class="article-meta">
+            <img class="article-avatar" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="EduGarden" />
+            <div class="article-author">EduGarden</div>
+            <div class="article-date">${date}</div>
+          </div>
+          <h3 class="article-title">${title}</h3>
+          <p class="article-preview-text">${(content || '').substring(0, 120)}${(content || '').length > 120 ? '...' : ''}</p>
+          <a href="#" class="read-more-btn" onclick="event.preventDefault(); event.stopPropagation(); openArticleModal('${a.id}')" data-translate="learn_more">${translations[window.currentLang || 'ge']['learn_more'] || 'Read More'}</a>
+        </div>
+      </article>`;
+  });
+  container.innerHTML = html;
+}
 
-            // Ensure clicking the main image opens lightbox with full-res image
-            modalImg.onclick = () => {
-              const lightbox = document.getElementById('imageLightbox');
-              const lightboxImg = document.getElementById('lightboxImage');
-              lightboxImg.src = data.images[0];
-              lightboxImg.alt = data.title;
-              lightboxImg.style.width = '90vw';
-              lightboxImg.style.height = '90vh';
-              lightboxImg.style.objectFit = 'contain';
-              lightbox.classList.add('active');
-              document.body.style.overflow = 'hidden';
-            };
+// Modal Expansion Implementation
+function buildArticleData(articleId) {
+  const a = allArticles.find(item => item.id === articleId);
+  if (!a) return null;
+  const lang = window.currentLang || 'ge';
+  
+  // If it's the compost bin article, use the rich images gallery
+  const isCompost = a.title_en && a.title_en.toLowerCase().includes('compost');
+  let images = [];
+  if (isCompost) {
+    images = articleImages.compost;
+  } else if (a.image_url) {
+    images = a.image_url.split(',').map(url => url.trim()).filter(url => !!url);
+  }
 
-            document.getElementById('modalDate').textContent = data.date;
-            document.getElementById('modalTitle').textContent = data.title;
-            document.getElementById('modalContent').innerHTML = data.content;
+  return {
+    title: lang === 'ge' ? a.title_ge : a.title_en,
+    date: new Date(a.created_at).toLocaleDateString(),
+    content: lang === 'ge' ? a.content_ge : a.content_en,
+    images: images
+  };
+}
 
-            const gallery = document.getElementById('modalGallery');
-            gallery.innerHTML = '';
-            data.images.forEach(imgSrc => {
-              const img = document.createElement('img');
-              img.src = imgSrc;
-              img.className = 'article-gallery-image';
-              img.alt = data.title;
-              img.addEventListener('click', () => {
-                img.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                  img.style.transform = 'scale(1.02)';
-                  setTimeout(() => {
-                    img.style.transform = 'scale(1)';
-                    const lightbox = document.getElementById('imageLightbox');
-                    const lightboxImg = document.getElementById('lightboxImage');
-                    lightboxImg.src = imgSrc;
-                    lightboxImg.alt = data.title;
-                    lightboxImg.style.width = '90vw';
-                    lightboxImg.style.height = '90vh';
-                    lightboxImg.style.objectFit = 'contain';
-                    lightbox.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                  }, 150);
-                }, 100);
-              });
-              gallery.appendChild(img);
-            });
-          }
+function renderModal(data) {
+  if (!data) return;
+  const modalImg = document.getElementById('modalImage');
+  const headerEl = document.querySelector('.article-modal-header');
+  
+  if (modalImg && data.images && data.images.length > 0) {
+    modalImg.src = data.images[0];
+    modalImg.alt = data.title;
+    modalImg.style.display = 'block';
+    
+    // Ensure clicking main image opens lightbox
+    modalImg.onclick = () => {
+      const lightbox = document.getElementById('imageLightbox');
+      const lightboxImg = document.getElementById('lightboxImage');
+      if (lightbox && lightboxImg) {
+        lightboxImg.src = data.images[0];
+        lightboxImg.alt = data.title;
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    };
+  } else if (modalImg) {
+    modalImg.style.display = 'none';
+  }
 
-          // Open modal function
-          function openModal(articleType) {
-            currentArticleOpen = articleType;
-            const data = buildArticleData(articleType);
-            if (!data) return;
-            renderModal(data);
-            document.querySelector('header').style.display = 'none';
-            document.querySelector('footer').style.display = 'none';
-            modal.classList.add('active');
+  document.getElementById('modalDate').textContent = data.date;
+  document.getElementById('modalTitle').textContent = data.title;
+  document.getElementById('modalContent').innerHTML = data.content.replace(/\n/g, '<br>');
+
+  const gallery = document.getElementById('modalGallery');
+  if (gallery) {
+    gallery.innerHTML = '';
+    if (data.images && data.images.length > 1) {
+      data.images.forEach(imgSrc => {
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.className = 'article-gallery-image';
+        img.alt = data.title;
+        img.addEventListener('click', () => {
+          const lightbox = document.getElementById('imageLightbox');
+          const lightboxImg = document.getElementById('lightboxImage');
+          if (lightbox && lightboxImg) {
+            lightboxImg.src = imgSrc;
+            lightboxImg.alt = data.title;
+            lightbox.classList.add('active');
             document.body.style.overflow = 'hidden';
           }
-
-          // Close modal function
-          function closeModalFunc() {
-            modal.classList.remove('active');
-            document.body.style.overflow = 'auto';
-            document.querySelector('header').style.display = '';
-            document.querySelector('footer').style.display = '';
-            currentArticleOpen = null;
-            // Reset hero sizing back to defaults for next open
-            const headerEl = document.querySelector('.article-modal-header');
-            const modalImg = document.getElementById('modalImage');
-            if (headerEl) headerEl.style.height = '300px';
-            if (modalImg) modalImg.style.objectFit = 'cover';
-          }
-
-          // Event listeners
-          articleCards.forEach(card => {
-            card.addEventListener('click', (e) => {
-              e.preventDefault();
-              const articleType = card.getAttribute('data-article');
-              openModal(articleType);
-            });
-          });
-
-          closeModal.addEventListener('click', closeModalFunc);
-
-          modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-              closeModalFunc();
-            }
-          });
-
-          // Lightbox event listeners
-          const lightbox = document.getElementById('imageLightbox');
-          const closeLightbox = document.getElementById('closeLightbox');
-
-          closeLightbox.addEventListener('click', () => {
-            lightbox.classList.remove('active');
-            document.body.style.overflow = 'auto';
-          });
-
-          lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) {
-              lightbox.classList.remove('active');
-              document.body.style.overflow = 'auto';
-            }
-          });
-
-          // Add keyboard support for lightbox and modal
-          document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-              if (lightbox.classList.contains('active')) {
-                lightbox.classList.remove('active');
-                document.body.style.overflow = 'auto';
-              } else if (modal.classList.contains('active')) {
-                closeModalFunc();
-              }
-            }
-          });
-
-          // Expose for language switch update
-          window.__articleModal__ = { renderModal, buildArticleData, get currentArticleOpen(){ return currentArticleOpen; } };
         });
+        gallery.appendChild(img);
+      });
+    }
+  }
+}
+
+function openArticleModal(articleId) {
+  currentArticleOpen = articleId;
+  const data = buildArticleData(articleId);
+  if (!data) return;
+  renderModal(data);
+  const modal = document.getElementById('articleModal');
+  if (modal) {
+    document.querySelector('header').style.display = 'none';
+    document.querySelector('footer').style.display = 'none';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+window.openArticleModal = openArticleModal;
+
+function closeModalFunc() {
+  const modal = document.getElementById('articleModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    document.querySelector('header').style.display = '';
+    document.querySelector('footer').style.display = '';
+    currentArticleOpen = null;
+  }
+}
+
+function setupModalEventListeners() {
+  const closeModal = document.getElementById('closeModal');
+  if (closeModal) {
+    closeModal.addEventListener('click', closeModalFunc);
+  }
+
+  const modal = document.getElementById('articleModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModalFunc();
+      }
+    });
+  }
+
+  // Lightbox close
+  const lightbox = document.getElementById('imageLightbox');
+  const closeLightbox = document.getElementById('closeLightbox');
+  if (closeLightbox && lightbox) {
+    closeLightbox.addEventListener('click', () => {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    });
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+
+  // Keyboard Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (lightbox && lightbox.classList.contains('active')) {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = 'auto';
+      } else if (modal && modal.classList.contains('active')) {
+        closeModalFunc();
+      }
+    }
+  });
+}
+
+// Re‑render when language changes
+function onLanguageChange() {
+  loadAndRenderArticles();
+}
+
+if (typeof window.registerLanguageChange === 'function') {
+  window.registerLanguageChange(onLanguageChange);
+}
+
+// Expose for language.js
+window.__articleModal__ = {
+  renderModal,
+  buildArticleData,
+  get currentArticleOpen() { return currentArticleOpen; }
+};
