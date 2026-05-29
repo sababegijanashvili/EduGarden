@@ -46,23 +46,22 @@
     const badges = document.createElement('div');
     badges.className = 'staff-popover-badges';
 
-    const staffBadge = document.createElement('span');
-    staffBadge.className = 'staff-popover-badge staff-member-badge';
-    staffBadge.textContent = lang === 'ge' ? 'გუნდის წევრი' : 'Staff Member';
-    badges.appendChild(staffBadge);
-
     const roleBadge = document.createElement('span');
     roleBadge.className = 'staff-popover-badge role-badge';
     roleBadge.textContent = roleName;
     
-    // Swap colors and use DB colors if available
+    // Use DB colors if available
     const isFounder = roleName === 'Founder' || roleName === 'დამფუძნებელი';
     const defaultRoleColor = isFounder ? '#b24060' : '#8d6e63';
     const defaultTextColor = '#ffffff';
     roleBadge.style.backgroundColor = member.badge_color || defaultRoleColor;
     roleBadge.style.color = member.badge_text_color || defaultTextColor;
-
     badges.appendChild(roleBadge);
+
+    const staffBadge = document.createElement('span');
+    staffBadge.className = 'staff-popover-badge staff-member-badge';
+    staffBadge.textContent = lang === 'ge' ? 'გუნდის წევრი' : 'Staff Member';
+    badges.appendChild(staffBadge);
     details.appendChild(badges);
 
     const name = document.createElement('div');
@@ -263,36 +262,15 @@
             const infoDiv = document.createElement('div');
             infoDiv.className = 'staff-compact-info';
 
-            // Role badge order is above name
-            const roleDiv = document.createElement('div');
-            roleDiv.className = 'staff-compact-role';
-            roleDiv.textContent = roleName;
-            
-            // Swap colors and use DB colors if available
-            const isFounder = roleName === 'Founder' || roleName === 'დამფუძნებელი';
-            const defaultRoleColor = isFounder ? '#b24060' : '#8d6e63';
-            const defaultTextColor = '#ffffff';
-            const badgeColor = member.badge_color || defaultRoleColor;
-            const badgeTextColor = member.badge_text_color || defaultTextColor;
-
-            roleDiv.style.backgroundColor = badgeColor;
-            roleDiv.style.color = badgeTextColor;
-            roleDiv.style.padding = '2px 8px';
-            roleDiv.style.borderRadius = '4px';
-            roleDiv.style.display = 'inline-block';
-            roleDiv.style.width = 'fit-content';
-            roleDiv.style.fontSize = '0.75rem';
-            roleDiv.style.fontWeight = '600';
-            roleDiv.style.marginBottom = '4px';
-            roleDiv.style.marginTop = '0px';
-            roleDiv.style.lineHeight = '1.2';
-            
-            infoDiv.appendChild(roleDiv);
-
             const nameDiv = document.createElement('div');
             nameDiv.className = 'staff-compact-name';
             nameDiv.textContent = member.name || '';
             infoDiv.appendChild(nameDiv);
+
+            const roleDiv = document.createElement('div');
+            roleDiv.className = 'staff-compact-role';
+            roleDiv.textContent = roleName;
+            infoDiv.appendChild(roleDiv);
 
             topDiv.appendChild(infoDiv);
             card.appendChild(topDiv);

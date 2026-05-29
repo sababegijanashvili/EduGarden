@@ -983,7 +983,6 @@ function ssf(id) {
   h += '<div class="form-row">';
   h += '<div class="form-group"><label>Location</label><input class="form-control" id="s_location" placeholder="e.g. Gori, Georgia"></div>';
   h += '<div class="form-group"><label>Years at EduGarden</label><input class="form-control" type="number" id="s_years_at" min="0" placeholder="e.g. 3"></div>';
-  h += '<div class="form-group"><label>Role Priority</label><input class="form-control" type="number" id="s_role_priority" min="0" placeholder="Lower value = higher on page"></div>';
   h += '</div>';
   
   h += '<div class="form-group"><label>Photo *</label><div id="sImageUpload"></div></div>';
@@ -1047,7 +1046,6 @@ function ssf(id) {
       document.getElementById('s_spec_ge').value = s.specialization_ge || '';
       document.getElementById('s_location').value = s.location || '';
       document.getElementById('s_years_at').value = s.years_at !== null && s.years_at !== undefined ? s.years_at : '';
-      document.getElementById('s_role_priority').value = s.role_priority !== null && s.role_priority !== undefined ? s.role_priority : '';
       
       document.getElementById('sImageUpload').appendChild(cfu(s.photo_url, function(f) { currentSelectedFile = f; }));
       document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
@@ -1082,9 +1080,6 @@ async function ss() {
     var yearsAtInput = document.getElementById('s_years_at').value;
     var yearsAt = yearsAtInput !== '' ? parseInt(yearsAtInput, 10) : null;
     
-    var priorityInput = document.getElementById('s_role_priority').value;
-    var rolePriority = priorityInput !== '' ? parseInt(priorityInput, 10) : null;
-
     // Save custom role to localStorage to save as reusable defaults
     if (sreCat === 'Other' && roleEn) {
       try {
@@ -1116,8 +1111,7 @@ async function ss() {
       specialization_en: specEn || null,
       specialization_ge: specGe || null,
       location: location || null,
-      years_at: yearsAt,
-      role_priority: rolePriority
+      years_at: yearsAt
     };
     if (iu) d.photo_url = iu;
     var result;

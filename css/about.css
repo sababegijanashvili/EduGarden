@@ -935,11 +935,11 @@ header {
       overflow-y: auto;
     }
     
-    /* XenForo Style Stats Footer */
+    /* 3-Column Stats Grid */
     .staff-popover-stats {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
       border-top: 1px solid rgba(0,0,0,0.06);
       margin-top: 10px;
       padding-top: 10px;
@@ -947,26 +947,28 @@ header {
     
     .staff-popover-stat-item {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      font-size: 0.85rem;
+      text-align: center;
+      padding: 6px 4px;
     }
     
     .staff-popover-stat-item:not(:last-child) {
-      border-right: none;
+      border-right: 1px solid rgba(0,0,0,0.06);
     }
     
     .staff-popover-stat-label {
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       color: #666;
       text-transform: uppercase;
       font-weight: 600;
+      margin-bottom: 4px;
     }
     
     .staff-popover-stat-value {
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
       color: #111;
-      text-align: right;
+      text-align: center;
     }
   
