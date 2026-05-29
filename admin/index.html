@@ -130,58 +130,7 @@
 
   </div>
 </div>
-<div id="app" class="hidden">
-<nav class="sidebar">
-  <div class="sidebar-brand">
-    <img src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="Logo"><span>EduGarden</span>
-  </div>
-  <div class="sidebar-nav">
-    <button class="sidebar-item active" data-section="articles"><span class="icon">&#x1F4DD;</span><span>Articles</span></button>
-    <button class="sidebar-item" data-section="roses"><span class="icon">&#x1F339;</span><span>Rose Catalog</span></button>
-    <button class="sidebar-item" data-section="adr_roses"><span class="icon">&#x1F339;</span><span>ADR Roses</span></button>
-    <button class="sidebar-item" data-section="staff"><span class="icon">&#x1F465;</span><span>Staff</span></button>
-    <button class="sidebar-item" data-section="team_photos"><span class="icon">&#x1F4F8;</span><span>Team Photos</span></button>
-    <button class="sidebar-item" data-section="messages"><span class="icon">&#x2709;&#xFE0F;</span><span>Messages</span><span class="badge" id="unreadBadge" style="display:none">0</span></button>
-    <button class="sidebar-item" data-section="chatbot"><span class="icon">&#x1F916;</span><span>Chatbot Knowledge</span></button>
-    <button class="sidebar-item" data-section="settings"><span class="icon">&#x2699;&#xFE0F;</span><span>Site Settings</span></button>
-  </div>
-  <div class="sidebar-footer">
-    <button class="btn btn-sm btn-secondary" id="logoutBtnSidebar" style="width:100%">&#x1F6AA; Logout</button>
-  </div>
-</nav>
-<div class="main">
-<header class="header">
-  <h2 id="sectionTitle">Articles</h2>
-  <div class="header-actions">
-    <button class="btn btn-primary btn-sm" id="sectionActionBtn">+ Add New</button>
-    <button class="btn btn-icon" id="logoutBtnHeader" title="Logout">&#x1F6AA;</button>
-  </div>
-</header>
-<div class="content" id="sectionContent"><div class="spinner"></div></div>
-</div>
-</div>
-<div class="modal-overlay" id="modalOverlay">
-<div class="modal">
-  <div class="modal-header"><h3 id="modalTitle">Modal</h3><button class="btn-icon" id="closeModalBtn">&times;</button></div>
-  <div class="modal-body" id="modalBody"></div>
-</div>
-</div>
-<div class="modal-overlay" id="confirmOverlay">
-<div class="modal" style="width:420px">
-  <div class="modal-body">
-    <div class="confirm-dialog">
-      <div class="icon">&#x26A0;&#xFE0F;</div>
-      <h3 id="confirmTitle">Are you sure?</h3>
-      <p id="confirmMessage">This action cannot be undone.</p>
-      <div class="actions">
-        <button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
-        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-<div id="toastContainer"></div>
+<div id="dashboardRoot"></div>
 <script>
 const { createClient } = supabase;
 const supabaseClient = createClient('https://exoyfpqfgixofsuginxx.supabase.co', 'sb_publishable_UExfTnoTaFgieljt6oiZ8Q_m0f2raxy');
@@ -196,20 +145,100 @@ let contentImagesList = [];
 let originalBannerUrl = '';
 let staffOrderChanged = false;
 let allStaffMembers = [];
+let dashboardInjected = false;
 var sectionNames = { articles:'Articles', roses:'Rose Catalog', adr_roses:'ADR Roses', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
 
 document.getElementById('loginBtn').addEventListener('click', handleLogin);
 document.getElementById('loginEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') { document.getElementById('loginPassword').focus(); } });
 document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
-document.getElementById('logoutBtnSidebar').addEventListener('click', handleLogout);
-document.getElementById('logoutBtnHeader').addEventListener('click', handleLogout);
-document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
-document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
-document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
-document.getElementById('confirmDeleteBtn').addEventListener('click', executeConfirm);
-document.getElementById('sectionActionBtn').addEventListener('click', handleSectionAction);
-document.querySelectorAll('.sidebar-item').forEach(function(el) { el.addEventListener('click', function() { switchSection(this.dataset.section); }); });
+
+// ---- Dynamic dashboard injection (only after auth) ----
+function injectDashboard() {
+  if (dashboardInjected) return;
+  dashboardInjected = true;
+  var root = document.getElementById('dashboardRoot');
+  root.innerHTML = '<div id="app">' +
+    '<nav class="sidebar">' +
+      '<div class="sidebar-brand">' +
+        '<img src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="Logo"><span>EduGarden</span>' +
+      '</div>' +
+      '<div class="sidebar-nav">' +
+        '<button class="sidebar-item active" data-section="articles"><span class="icon">&#x1F4DD;</span><span>Articles</span></button>' +
+        '<button class="sidebar-item" data-section="roses"><span class="icon">&#x1F339;</span><span>Rose Catalog</span></button>' +
+        '<button class="sidebar-item" data-section="adr_roses"><span class="icon">&#x1F339;</span><span>ADR Roses</span></button>' +
+        '<button class="sidebar-item" data-section="staff"><span class="icon">&#x1F465;</span><span>Staff</span></button>' +
+        '<button class="sidebar-item" data-section="team_photos"><span class="icon">&#x1F4F8;</span><span>Team Photos</span></button>' +
+        '<button class="sidebar-item" data-section="messages"><span class="icon">&#x2709;&#xFE0F;</span><span>Messages</span><span class="badge" id="unreadBadge" style="display:none">0</span></button>' +
+        '<button class="sidebar-item" data-section="chatbot"><span class="icon">&#x1F916;</span><span>Chatbot Knowledge</span></button>' +
+        '<button class="sidebar-item" data-section="settings"><span class="icon">&#x2699;&#xFE0F;</span><span>Site Settings</span></button>' +
+      '</div>' +
+      '<div class="sidebar-footer">' +
+        '<button class="btn btn-sm btn-secondary" id="logoutBtnSidebar" style="width:100%">&#x1F6AA; Logout</button>' +
+      '</div>' +
+    '</nav>' +
+    '<div class="main">' +
+      '<header class="header">' +
+        '<h2 id="sectionTitle">Articles</h2>' +
+        '<div class="header-actions">' +
+          '<button class="btn btn-primary btn-sm" id="sectionActionBtn">+ Add New</button>' +
+          '<button class="btn btn-icon" id="logoutBtnHeader" title="Logout">&#x1F6AA;</button>' +
+        '</div>' +
+      '</header>' +
+      '<div class="content" id="sectionContent"><div class="spinner"></div></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="modal-overlay" id="modalOverlay">' +
+    '<div class="modal">' +
+      '<div class="modal-header"><h3 id="modalTitle">Modal</h3><button class="btn-icon" id="closeModalBtn">&times;</button></div>' +
+      '<div class="modal-body" id="modalBody"></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="modal-overlay" id="confirmOverlay">' +
+    '<div class="modal" style="width:420px">' +
+      '<div class="modal-body">' +
+        '<div class="confirm-dialog">' +
+          '<div class="icon">&#x26A0;&#xFE0F;</div>' +
+          '<h3 id="confirmTitle">Are you sure?</h3>' +
+          '<p id="confirmMessage">This action cannot be undone.</p>' +
+          '<div class="actions">' +
+            '<button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>' +
+            '<button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>' +
+  '<div id="toastContainer"></div>';
+
+  // Bind event listeners to injected elements
+  document.getElementById('logoutBtnSidebar').addEventListener('click', handleLogout);
+  document.getElementById('logoutBtnHeader').addEventListener('click', handleLogout);
+  document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+  document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
+  document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
+  document.getElementById('confirmDeleteBtn').addEventListener('click', executeConfirm);
+  document.getElementById('sectionActionBtn').addEventListener('click', handleSectionAction);
+  document.querySelectorAll('.sidebar-item').forEach(function(el) { el.addEventListener('click', function() { switchSection(this.dataset.section); }); });
+}
+
+function teardownDashboard() {
+  var root = document.getElementById('dashboardRoot');
+  root.innerHTML = '';
+  dashboardInjected = false;
+  currentSection = 'articles';
+}
+
+function showDashboard() {
+  injectDashboard();
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').style.display = '';
+}
+
+function hideDashboard() {
+  teardownDashboard();
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
 
 async function handleLogin() {
   var email = document.getElementById('loginEmail').value.trim();
@@ -227,8 +256,7 @@ async function handleLogin() {
       document.getElementById('loginPassword').focus();
     } else {
       err.classList.remove('show');
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
+      showDashboard();
       initApp();
     }
   } catch(e) {
@@ -242,8 +270,7 @@ async function handleLogout() {
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('loginError').classList.remove('show');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('app').classList.add('hidden');
+  hideDashboard();
 }
 
 // Check for existing session on page load
@@ -251,8 +278,7 @@ async function handleLogout() {
   try {
     var result = await supabaseClient.auth.getSession();
     if (result.data && result.data.session) {
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
+      showDashboard();
       initApp();
     }
   } catch(e) { /* no session, stay on login */ }
@@ -261,13 +287,13 @@ async function handleLogout() {
 // Listen for auth state changes (e.g. token expiry)
 supabaseClient.auth.onAuthStateChange(function(event, session) {
   if (event === 'SIGNED_OUT' || (!session && event === 'TOKEN_REFRESHED')) {
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
+    hideDashboard();
   }
 });
 function showToast(message, type) {
   if (!type) type = 'success';
   var c = document.getElementById('toastContainer');
+  if (!c) return;
   var t = document.createElement('div');
   t.className = 'toast ' + type;
   t.textContent = message;
