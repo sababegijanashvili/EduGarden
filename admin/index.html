@@ -808,7 +808,7 @@ async function dadr(id, iu) {
 // 3. STAFF
 // ============================================================
 async function rsf(c) {
-  var r = await supabaseClient.from('staff').select('*').order('order_index', { ascending: true });
+  var r = await supabaseClient.from('staff').select('*').order('role_priority', { ascending: true }).order('order_index', { ascending: true });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
   allStaffMembers = r.data || [];
   if (!allStaffMembers.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F465;</div><p>No staff yet.</p></div>'; return; }
@@ -835,11 +835,20 @@ async function rsf(c) {
     groups[roleKey].forEach(s => {
       var roleParts = (s.role_en || '').split('|');
       var roleName = roleParts[0] || '';
+      
+      var badgeStyle = 'font-size:0.75rem;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px;font-weight:600;width:fit-content;';
+      if (s.badge_color) {
+        badgeStyle += 'background:' + s.badge_color + ';color:' + (s.badge_text_color || '#ffffff') + ';';
+      } else {
+        var isFounder = roleName === 'Founder' || roleName === 'დამფუძნებელი';
+        badgeStyle += 'background:' + (isFounder ? '#b24060' : '#8d6e63') + ';color:#ffffff;';
+      }
+
       h += '<div class="admin-staff-card item-card" draggable="true" data-id="' + s.id + '" data-order="' + (s.order_index || 0) + '" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f7f7f9;border-radius:16px;border:1px solid rgba(0,0,0,0.03);width:320px;max-width:100%;box-sizing:border-box;transition:transform 0.2s, box-shadow 0.2s;">';
       h += '<img src="' + s.photo_url + '" alt="' + (s.name || '') + '" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);">';
-      h += '<div class="admin-staff-info" style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">';
+      h += '<div class="admin-staff-info" style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;">';
       h += '<h4 style="font-size:0.95rem;font-weight:700;color:var(--green-dark);margin-bottom:2px;overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + (s.name || '') + '</h4>';
-      h += '<p style="font-size:0.8rem;color:var(--gray-600);overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + roleName + '</p>';
+      h += '<span style="' + badgeStyle + '">' + roleName + '</span>';
       h += '</div>';
       h += '<div class="admin-staff-actions" style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:auto;">';
       h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--green);color:#fff;">Edit</button>';
@@ -926,8 +935,7 @@ function ssf(id) {
   });
 
   var h = '<form id="sf">';
-  h += '<div class="form-row"><div class="form-group"><label>Name (EN) *</label><input class="form-control" id="sne" required></div>';
-  h += '<div class="form-group"><label>Name (GE) *</label><input class="form-control" id="sng" required></div></div>';
+  h += '<div class="form-group"><label>Name *</label><input class="form-control" id="sn" required></div>';
   
   h += '<div class="form-row"><div class="form-group"><label>Role Category (EN)</label>';
   h += '<select class="form-control" id="sre_cat">';
@@ -950,9 +958,33 @@ function ssf(id) {
   h += '</select>';
   h += '<input class="form-control" id="srg_custom" style="display:none; margin-top: 8px;" placeholder="ჩაწერეთ სხვა როლი">';
   h += '</div></div>';
+
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label>Role Badge Color</label>';
+  h += '<div style="display:flex; gap: 8px; align-items:center;">';
+  h += '<input type="color" id="s_badge_color" value="#4CAF50" style="width: 50px; height: 38px; border: 1px solid var(--gray-300); border-radius: 4px; padding: 2px; cursor: pointer;">';
+  h += '<span style="font-size:0.8rem; color:var(--gray-600);">Background color</span>';
+  h += '</div>';
+  h += '</div>';
+  h += '<div class="form-group"><label>Role Badge Text Color</label>';
+  h += '<div style="display:flex; gap: 8px; align-items:center;">';
+  h += '<input type="color" id="s_badge_text_color" value="#ffffff" style="width: 50px; height: 38px; border: 1px solid var(--gray-300); border-radius: 4px; padding: 2px; cursor: pointer;">';
+  h += '<span style="font-size:0.8rem; color:var(--gray-600);">Text color</span>';
+  h += '</div>';
+  h += '</div>';
+  h += '</div>';
   
   h += '<div class="form-row"><div class="form-group"><label>Bio / Extra Info (EN)</label><textarea class="form-control" id="s_bio_en" placeholder="Bio for expanded view"></textarea></div>';
   h += '<div class="form-group"><label>Bio / Extra Info (GE)</label><textarea class="form-control" id="s_bio_ge" placeholder="ბიოგრაფია გაფართოებული ხედისთვის"></textarea></div></div>';
+
+  h += '<div class="form-row"><div class="form-group"><label>Specialization (EN)</label><input class="form-control" id="s_spec_en" placeholder="e.g. Organic Gardening"></div>';
+  h += '<div class="form-group"><label>Specialization (GE)</label><input class="form-control" id="s_spec_ge" placeholder="მაგ. ორგანული მებაღეობა"></div></div>';
+
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label>Location</label><input class="form-control" id="s_location" placeholder="e.g. Gori, Georgia"></div>';
+  h += '<div class="form-group"><label>Years at EduGarden</label><input class="form-control" type="number" id="s_years_at" min="0" placeholder="e.g. 3"></div>';
+  h += '<div class="form-group"><label>Role Priority</label><input class="form-control" type="number" id="s_role_priority" min="0" placeholder="Lower value = higher on page"></div>';
+  h += '</div>';
   
   h += '<div class="form-group"><label>Photo *</label><div id="sImageUpload"></div></div>';
   h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
@@ -981,16 +1013,15 @@ function ssf(id) {
       var r = await supabaseClient.from('staff').select('*').eq('id', id).single();
       if (r.error || !r.data) { st('Error loading staff', 'error'); cm(); return; }
       var s = r.data;
-      document.getElementById('sne').value = s.name || '';
-      document.getElementById('sng').value = s.name || '';
+      document.getElementById('sn').value = s.name || '';
       
       var partsEn = (s.role_en || '').split('|');
       var roleEn = partsEn[0] || '';
-      var bioEn = partsEn[1] || '';
+      var bioEn = s.bio_en || partsEn[1] || '';
       
       var partsGe = (s.role_ge || '').split('|');
       var roleGe = partsGe[0] || '';
-      var bioGe = partsGe[1] || '';
+      var bioGe = s.bio_ge || partsGe[1] || '';
       
       if (uniqueRolesEn.indexOf(roleEn) !== -1) {
         sreCat.value = roleEn;
@@ -1010,6 +1041,13 @@ function ssf(id) {
       
       document.getElementById('s_bio_en').value = bioEn;
       document.getElementById('s_bio_ge').value = bioGe;
+      document.getElementById('s_badge_color').value = s.badge_color || '#4CAF50';
+      document.getElementById('s_badge_text_color').value = s.badge_text_color || '#ffffff';
+      document.getElementById('s_spec_en').value = s.specialization_en || '';
+      document.getElementById('s_spec_ge').value = s.specialization_ge || '';
+      document.getElementById('s_location').value = s.location || '';
+      document.getElementById('s_years_at').value = s.years_at !== null && s.years_at !== undefined ? s.years_at : '';
+      document.getElementById('s_role_priority').value = s.role_priority !== null && s.role_priority !== undefined ? s.role_priority : '';
       
       document.getElementById('sImageUpload').appendChild(cfu(s.photo_url, function(f) { currentSelectedFile = f; }));
       document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
@@ -1018,9 +1056,8 @@ function ssf(id) {
 }
 
 async function ss() {
-  var ne = document.getElementById('sne').value.trim();
-  var ng = document.getElementById('sng').value.trim();
-  if (!ne || !ng) { st('Name fields required', 'error'); return; }
+  var name = document.getElementById('sn').value.trim();
+  if (!name) { st('Name field required', 'error'); return; }
   if (!currentSelectedFile && currentAction === 'add') { st('Photo required', 'error'); return; }
   try {
     var iu = null;
@@ -1034,6 +1071,20 @@ async function ss() {
     var roleGe = srgCat === 'Other' ? document.getElementById('srg_custom').value.trim() : srgCat;
     var bioGe = document.getElementById('s_bio_ge').value.trim();
     
+    var badgeColor = document.getElementById('s_badge_color').value;
+    var badgeTextColor = document.getElementById('s_badge_text_color').value;
+    
+    var specEn = document.getElementById('s_spec_en').value.trim();
+    var specGe = document.getElementById('s_spec_ge').value.trim();
+    
+    var location = document.getElementById('s_location').value.trim();
+    
+    var yearsAtInput = document.getElementById('s_years_at').value;
+    var yearsAt = yearsAtInput !== '' ? parseInt(yearsAtInput, 10) : null;
+    
+    var priorityInput = document.getElementById('s_role_priority').value;
+    var rolePriority = priorityInput !== '' ? parseInt(priorityInput, 10) : null;
+
     // Save custom role to localStorage to save as reusable defaults
     if (sreCat === 'Other' && roleEn) {
       try {
@@ -1054,10 +1105,20 @@ async function ss() {
       } catch(e) {}
     }
 
-    var fullRoleEn = roleEn + '|' + bioEn;
-    var fullRoleGe = roleGe + '|' + bioGe;
-    
-    var d = { name: ne, role_en: fullRoleEn, role_ge: fullRoleGe };
+    var d = {
+      name: name,
+      role_en: roleEn,
+      role_ge: roleGe,
+      bio_en: bioEn,
+      bio_ge: bioGe,
+      badge_color: badgeColor,
+      badge_text_color: badgeTextColor,
+      specialization_en: specEn || null,
+      specialization_ge: specGe || null,
+      location: location || null,
+      years_at: yearsAt,
+      role_priority: rolePriority
+    };
     if (iu) d.photo_url = iu;
     var result;
     if (currentAction === 'add') { d.order_index = 0; result = await supabaseClient.from('staff').insert(d); }

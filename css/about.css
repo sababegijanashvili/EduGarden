@@ -909,11 +909,11 @@ header {
     }
     
     .staff-popover-badge.staff-member-badge {
-      background: var(--rose);
+      background: #8d6e63;
     }
     
     .staff-popover-badge.role-badge {
-      background: #8d6e63;
+      background: var(--rose);
     }
     
     .staff-popover-subtext {
@@ -924,47 +924,49 @@ header {
     
     .staff-popover-bio {
       font-size: 0.88rem;
-      line-height: 1.5;
+      line-height: 1.4;
       color: #333;
       border-top: 1px solid rgba(0,0,0,0.06);
-      padding-top: 12px;
-      margin-top: 4px;
-      text-align: justify;
+      padding-top: 10px;
+      margin-top: 8px;
+      text-align: left;
       white-space: pre-wrap;
-      max-height: 150px;
+      max-height: 120px;
       overflow-y: auto;
     }
     
     /* XenForo Style Stats Footer */
     .staff-popover-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       border-top: 1px solid rgba(0,0,0,0.06);
-      margin-top: 12px;
-      padding-top: 12px;
-      text-align: center;
+      margin-top: 10px;
+      padding-top: 10px;
     }
     
     .staff-popover-stat-item {
       display: flex;
-      flex-direction: column;
-      gap: 2px;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
     }
     
     .staff-popover-stat-item:not(:last-child) {
-      border-right: 1px solid rgba(0,0,0,0.06);
+      border-right: none;
     }
     
     .staff-popover-stat-label {
-      font-size: 0.7rem;
-      color: #888;
+      font-size: 0.75rem;
+      color: #666;
       text-transform: uppercase;
       font-weight: 600;
     }
     
     .staff-popover-stat-value {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #333;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #111;
+      text-align: right;
     }
   
