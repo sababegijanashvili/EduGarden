@@ -122,9 +122,10 @@
   <div class="login-card">
     <img class="login-logo" src="https://i.postimg.cc/Lsww5VsK/photoshop-project34c213.png" alt="EduGarden">
     <h1>EduGarden Admin</h1>
-    <p>Enter password to access the dashboard</p>
-    <div class="login-error" id="loginError">Incorrect password</div>
-    <input type="password" id="loginPassword" placeholder="Enter password" autofocus>
+    <p>Sign in to access the dashboard</p>
+    <div class="login-error" id="loginError">Invalid email or password</div>
+    <input type="email" id="loginEmail" placeholder="Email address" autofocus>
+    <input type="password" id="loginPassword" placeholder="Password">
     <button class="btn btn-primary" id="loginBtn">Sign In</button>
 
   </div>
@@ -198,7 +199,7 @@ let allStaffMembers = [];
 var sectionNames = { articles:'Articles', roses:'Rose Catalog', adr_roses:'ADR Roses', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
 
 document.getElementById('loginBtn').addEventListener('click', handleLogin);
-
+document.getElementById('loginEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') { document.getElementById('loginPassword').focus(); } });
 document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('logoutBtnSidebar').addEventListener('click', handleLogout);
 document.getElementById('logoutBtnHeader').addEventListener('click', handleLogout);
@@ -210,27 +211,60 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', executeCon
 document.getElementById('sectionActionBtn').addEventListener('click', handleSectionAction);
 document.querySelectorAll('.sidebar-item').forEach(function(el) { el.addEventListener('click', function() { switchSection(this.dataset.section); }); });
 
-function handleLogin() {
+async function handleLogin() {
+  var email = document.getElementById('loginEmail').value.trim();
   var pw = document.getElementById('loginPassword').value;
   var err = document.getElementById('loginError');
-  if (pw === 'Edugarden!2026') {
-    sessionStorage.setItem('edugarden_admin', 'logged_in');
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    initApp();
-  } else {
+  var btn = document.getElementById('loginBtn');
+  if (!email || !pw) { err.textContent = 'Please enter email and password'; err.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    var result = await supabaseClient.auth.signInWithPassword({ email: email, password: pw });
+    if (result.error) {
+      err.textContent = 'Invalid email or password';
+      err.classList.add('show');
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginPassword').focus();
+    } else {
+      err.classList.remove('show');
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      initApp();
+    }
+  } catch(e) {
+    err.textContent = 'Login failed: ' + e.message;
     err.classList.add('show');
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('loginPassword').focus();
   }
+  btn.disabled = false; btn.textContent = 'Sign In';
 }
-function handleLogout() {
-  sessionStorage.removeItem('edugarden_admin');
+async function handleLogout() {
+  await supabaseClient.auth.signOut();
+  document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('loginError').classList.remove('show');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
 }
+
+// Check for existing session on page load
+(async function checkSession() {
+  try {
+    var result = await supabaseClient.auth.getSession();
+    if (result.data && result.data.session) {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      initApp();
+    }
+  } catch(e) { /* no session, stay on login */ }
+})();
+
+// Listen for auth state changes (e.g. token expiry)
+supabaseClient.auth.onAuthStateChange(function(event, session) {
+  if (event === 'SIGNED_OUT' || (!session && event === 'TOKEN_REFRESHED')) {
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+  }
+});
 function showToast(message, type) {
   if (!type) type = 'success';
   var c = document.getElementById('toastContainer');

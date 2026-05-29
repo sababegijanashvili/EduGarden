@@ -200,11 +200,11 @@ async function deleteImage(url) {
 
 ### Authentication
 
-- Simple password check (no Supabase Auth, no JWT)
-- **Password:** `Edugarden!2026`
-- Session stored in `sessionStorage` key `edugarden_admin`
-- Quick Login button auto-fills password and submits
-- No real security — this is for convenience, not production security
+- Uses **Supabase Auth** (`signInWithPassword` / `signOut` / `getSession`)
+- Email + password login via Supabase's built-in authentication
+- On page load, checks for existing session via `supabaseClient.auth.getSession()`
+- Listens for `onAuthStateChange` to handle token expiry / sign-out
+- User accounts are created in the Supabase Dashboard under Authentication → Users
 
 ### Login Flow
 
@@ -214,15 +214,14 @@ async function deleteImage(url) {
 ```
 
 ```javascript
-function handleLogin() {
-  if (pw === 'Edugarden!2026') {
-    sessionStorage.setItem('edugarden_admin', 'logged_in');
-    // show app, init
-  }
+async function handleLogin() {
+  var result = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (result.error) { /* show error */ }
+  else { /* show app, init */ }
 }
 ```
 
-If already logged in (sessionStorage check), the login screen is hidden immediately on page load.
+If an existing session is found on page load, the login screen is skipped automatically.
 
 ### Sidebar Navigation
 
