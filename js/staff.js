@@ -43,41 +43,48 @@
     const details = document.createElement('div');
     details.className = 'staff-popover-details';
 
+    // Name FIRST
+    const name = document.createElement('div');
+    name.className = 'staff-popover-name';
+    name.textContent = member.name || '';
+    details.appendChild(name);
+
+    // Badges block (role from DB + fixed team badge)
     const badges = document.createElement('div');
     badges.className = 'staff-popover-badges';
 
     const roleBadge = document.createElement('span');
     roleBadge.className = 'staff-popover-badge role-badge';
     roleBadge.textContent = roleName;
-    
-    // Use DB colors if available
-    const isFounder = roleName === 'Founder' || roleName === 'დამფუძნებელი';
-    const defaultRoleColor = isFounder ? '#b24060' : '#8d6e63';
-    const defaultTextColor = '#ffffff';
-    roleBadge.style.backgroundColor = member.badge_color || defaultRoleColor;
-    roleBadge.style.color = member.badge_text_color || defaultTextColor;
+    roleBadge.style.backgroundColor = member.badge_color || '#8d6e63';
+    roleBadge.style.color = member.badge_text_color || '#ffffff';
     badges.appendChild(roleBadge);
 
-    const staffBadge = document.createElement('span');
-    staffBadge.className = 'staff-popover-badge staff-member-badge';
-    staffBadge.textContent = lang === 'ge' ? 'გუნდის წევრი' : 'Staff Member';
-    badges.appendChild(staffBadge);
+    const teamBadge = document.createElement('span');
+    teamBadge.className = 'staff-popover-badge staff-member-badge';
+    teamBadge.textContent = lang === 'ge' ? 'გუნდის წევრი' : 'Team Member';
+    badges.appendChild(teamBadge);
     details.appendChild(badges);
 
-    const name = document.createElement('div');
-    name.className = 'staff-popover-name';
-    name.textContent = member.name || '';
-    details.appendChild(name);
-
+    // Subtext
     const subtext = document.createElement('div');
     subtext.className = 'staff-popover-subtext';
-    subtext.textContent = lang === 'ge' ? 'EduGarden-ის დამფუძნებელი გუნდი' : 'EduGarden Founding Team';
+    subtext.textContent = lang === 'ge' ? 'EduGarden-ის გუნდი' : 'EduGarden Team';
     details.appendChild(subtext);
 
     header.appendChild(details);
     popover.appendChild(header);
 
-    // Stats (displayed above bio, as simple rows)
+    // Bio (displayed after header, before stats)
+    const bioVal = (lang === 'ge' ? member.bio_ge : member.bio_en) || bioText;
+    if (bioVal) {
+      const bio = document.createElement('div');
+      bio.className = 'staff-popover-bio';
+      bio.textContent = bioVal;
+      popover.appendChild(bio);
+    }
+
+    // Stats grid at the very bottom
     const stats = document.createElement('div');
     stats.className = 'staff-popover-stats';
 
@@ -105,15 +112,6 @@
       stats.appendChild(statItem);
     });
     popover.appendChild(stats);
-
-    // Bio (displayed below stats)
-    const bioVal = (lang === 'ge' ? member.bio_ge : member.bio_en) || bioText;
-    if (bioVal) {
-      const bio = document.createElement('div');
-      bio.className = 'staff-popover-bio';
-      bio.textContent = bioVal;
-      popover.appendChild(bio);
-    }
 
     document.body.appendChild(popover);
     activePopover = popover;
