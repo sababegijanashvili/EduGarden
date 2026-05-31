@@ -15,10 +15,9 @@ window.showToast = function (message, type = 'info') {
     container = document.createElement('div');
     container.id = 'toast-container';
     container.style.position = 'fixed';
-    container.style.top = '20px';
+    container.style.bottom = '20px';
     container.style.right = '20px';
-    container.style.bottom = 'auto';
-    container.style.zIndex = '99999';
+    container.style.zIndex = '9999';
     document.body.appendChild(container);
   }
   const toast = document.createElement('div');
