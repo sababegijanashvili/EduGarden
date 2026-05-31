@@ -123,6 +123,11 @@
     .role-order-item:hover{background:var(--gray-100)}
     .role-drag-handle{font-size:1.25rem;color:var(--gray-500);line-height:1;flex-shrink:0;cursor:grab}
     .role-order-label{font-weight:600;color:var(--gray-800);flex:1}
+    .staff-role-row{border:1px solid var(--gray-200);border-radius:var(--radius);padding:16px;margin-bottom:12px;background:var(--gray-50)}
+    .messages-section{margin-bottom:24px}
+    .messages-section h3{font-size:1rem;font-weight:700;color:var(--gray-800);margin-bottom:12px}
+    .read-messages-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+    .read-messages-toggle:hover{color:var(--green-dark)}
   </style>
 </head>
 <body>
@@ -152,6 +157,9 @@ let currentSelectedFile = null;
 let contentImagesList = [];
 let originalBannerUrl = '';
 let allStaffMembers = [];
+let staffRolesFormList = [];
+let allMessages = [];
+let messagesChannel = null;
 let dashboardInjected = false;
 var sectionNames = { articles:'Articles', roses:'Rose Catalog', adr_roses:'ADR Roses', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
 
@@ -323,6 +331,7 @@ function closeConfirm() { document.getElementById('confirmOverlay').classList.re
 function executeConfirm() { if (confirmCallback) confirmCallback(); closeConfirm(); }
 
 function switchSection(section) {
+  if (currentSection === 'messages' && section !== 'messages') teardownMessagesSubscription();
   currentSection = section;
   document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.toggle('active', el.dataset.section === section); });
   document.getElementById('sectionTitle').textContent = sectionNames[section];
@@ -814,68 +823,116 @@ async function dadr(id, iu) {
 // ============================================================
 // 3. STAFF
 // ============================================================
+function escHtmlAttr(val) {
+  return (val || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function formatRoleLabelAdmin(roleGe, roleEn) {
+  roleEn = (roleEn || '').trim();
+  roleGe = (roleGe || '').trim();
+  if (roleGe && roleEn) return roleGe + ' (' + roleEn + ')';
+  return roleEn || roleGe || 'Other';
+}
+
+function parseMemberRoles(member) {
+  if (member.roles && Array.isArray(member.roles) && member.roles.length) {
+    return member.roles.map(function(r) {
+      return {
+        role_en: (r.role_en || '').trim(),
+        role_ge: (r.role_ge || '').trim(),
+        badge_color: r.badge_color || '#4CAF50',
+        badge_text_color: r.badge_text_color || '#ffffff',
+        role_priority: r.role_priority != null ? r.role_priority : 999
+      };
+    }).sort(function(a, b) { return a.role_priority - b.role_priority; });
+  }
+  var roleEn = (member.role_en || '').split('|')[0].trim();
+  var roleGe = (member.role_ge || '').split('|')[0].trim();
+  if (!roleEn && !roleGe) return [];
+  return [{
+    role_en: roleEn,
+    role_ge: roleGe,
+    badge_color: member.badge_color || '#4CAF50',
+    badge_text_color: member.badge_text_color || '#ffffff',
+    role_priority: member.role_priority != null ? member.role_priority : 999
+  }];
+}
+
+function getPrimaryRoleKeyAdmin(member) {
+  var roles = parseMemberRoles(member);
+  return roles.length && roles[0].role_en ? roles[0].role_en : 'Other';
+}
+
+function collectRoleRegistryAdmin(members) {
+  var registry = {};
+  members.forEach(function(member) {
+    parseMemberRoles(member).forEach(function(role) {
+      var key = role.role_en || 'Other';
+      if (!registry[key] || role.role_priority < registry[key].role_priority) {
+        registry[key] = { role_en: key, role_ge: role.role_ge, role_priority: role.role_priority };
+      }
+    });
+  });
+  return Object.keys(registry).map(function(key) { return registry[key]; })
+    .sort(function(a, b) { return a.role_priority - b.role_priority; });
+}
+
+function memberHasRole(member, roleKey) {
+  return parseMemberRoles(member).some(function(r) { return r.role_en === roleKey; });
+}
+
 async function rsf(c) {
   var r = await supabaseClient.from('staff').select('*').order('role_priority', { ascending: true }).order('order_index', { ascending: true });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
   allStaffMembers = r.data || [];
   if (!allStaffMembers.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F465;</div><p>No staff yet.</p></div>'; return; }
-  
-  // Group staff by their role
-  const groups = {};
-  const roleOrder = [];
-  allStaffMembers.forEach(member => {
-    const rawRole = member.role_en || '';
-    const roleKey = rawRole.split('|')[0].trim() || 'Other';
-    if (!groups[roleKey]) {
-      groups[roleKey] = [];
-      roleOrder.push(roleKey);
-    }
+
+  var roleRegistry = collectRoleRegistryAdmin(allStaffMembers);
+  var groups = {};
+  allStaffMembers.forEach(function(member) {
+    var roleKey = getPrimaryRoleKeyAdmin(member);
+    if (!groups[roleKey]) groups[roleKey] = [];
     groups[roleKey].push(member);
   });
-
-  function escRoleAttr(role) {
-    return (role || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-  }
 
   var h = '';
   h += '<div class="role-order-panel">';
   h += '<h3>Role Order (drag to reorder)</h3>';
   h += '<div class="role-order-list" id="roleOrderList">';
-  roleOrder.forEach(function(roleKey) {
-    h += '<div class="role-order-item" draggable="true" data-role="' + escRoleAttr(roleKey) + '">';
+  roleRegistry.forEach(function(roleMeta) {
+    var roleKey = roleMeta.role_en;
+    h += '<div class="role-order-item" draggable="true" data-role="' + escHtmlAttr(roleKey) + '">';
     h += '<span class="role-drag-handle" aria-hidden="true">⠿</span>';
-    h += '<span class="role-order-label">' + escRoleAttr(roleKey) + '</span>';
+    h += '<span class="role-order-label">' + escHtmlAttr(formatRoleLabelAdmin(roleMeta.role_ge, roleMeta.role_en)) + '</span>';
     h += '</div>';
   });
   h += '</div></div>';
 
   h += '<div id="staffGroupsContainer">';
-  roleOrder.forEach(function(roleKey) {
-    h += '<div class="staff-group-panel" data-role="' + escRoleAttr(roleKey) + '" style="background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);padding:24px 32px;margin-bottom:32px;border:1.5px solid rgba(0,0,0,0.04);">';
-    h += '<h3 style="font-size:1.25rem;font-weight:700;color:var(--green-dark);margin-bottom:20px;padding-bottom:8px;border-bottom:2px solid var(--green-light);display:inline-block;">' + escRoleAttr(roleKey) + '</h3>';
+  roleRegistry.forEach(function(roleMeta) {
+    var roleKey = roleMeta.role_en;
+    if (!groups[roleKey] || !groups[roleKey].length) return;
+    h += '<div class="staff-group-panel" data-role="' + escHtmlAttr(roleKey) + '" style="background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);padding:24px 32px;margin-bottom:32px;border:1.5px solid rgba(0,0,0,0.04);">';
+    h += '<h3 style="font-size:1.25rem;font-weight:700;color:var(--green-dark);margin-bottom:20px;padding-bottom:8px;border-bottom:2px solid var(--green-light);display:inline-block;">' + escHtmlAttr(formatRoleLabelAdmin(roleMeta.role_ge, roleMeta.role_en)) + '</h3>';
     h += '<div class="staff-group-cards" style="display:flex;flex-wrap:wrap;gap:16px;">';
 
     groups[roleKey].forEach(function(s) {
-      var roleParts = (s.role_en || '').split('|');
-      var roleName = roleParts[0] || '';
+      var roles = parseMemberRoles(s);
+      var roleLabels = roles.map(function(role) {
+        var badgeStyle = 'font-size:0.75rem;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px;margin-right:4px;font-weight:600;width:fit-content;';
+        badgeStyle += 'background:' + (role.badge_color || '#8d6e63') + ';color:' + (role.badge_text_color || '#ffffff') + ';';
+        return '<span style="' + badgeStyle + '">' + escHtmlAttr(formatRoleLabelAdmin(role.role_ge, role.role_en)) + '</span>';
+      }).join('');
 
-      var badgeStyle = 'font-size:0.75rem;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px;font-weight:600;width:fit-content;';
-      if (s.badge_color) {
-        badgeStyle += 'background:' + s.badge_color + ';color:' + (s.badge_text_color || '#ffffff') + ';';
-      } else {
-        var isFounder = roleName === 'Founder' || roleName === 'დამფუძნებელი';
-        badgeStyle += 'background:' + (isFounder ? '#b24060' : '#8d6e63') + ';color:#ffffff;';
-      }
-
-      h += '<div class="admin-staff-card item-card" data-id="' + s.id + '" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f7f7f9;border-radius:16px;border:1px solid rgba(0,0,0,0.03);width:320px;max-width:100%;box-sizing:border-box;transition:transform 0.2s, box-shadow 0.2s;">';
-      h += '<img src="' + s.photo_url + '" alt="' + escRoleAttr(s.name || '') + '" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);">';
+      h += '<div class="admin-staff-card item-card" data-id="' + s.id + '" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f7f7f9;border-radius:16px;border:1px solid rgba(0,0,0,0.03);width:320px;max-width:100%;box-sizing:border-box;">';
+      h += '<img src="' + s.photo_url + '" alt="' + escHtmlAttr(s.name || '') + '" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);">';
       h += '<div class="admin-staff-info" style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;">';
-      h += '<h4 style="font-size:0.95rem;font-weight:700;color:var(--green-dark);margin-bottom:2px;overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + escRoleAttr(s.name || '') + '</h4>';
-      h += '<span style="' + badgeStyle + '">' + escRoleAttr(roleName) + '</span>';
+      h += '<h4 style="font-size:0.95rem;font-weight:700;color:var(--green-dark);margin-bottom:2px;line-height:1.2;word-break:break-word;">' + escHtmlAttr(s.name || '') + '</h4>';
+      h += '<div style="display:flex;flex-wrap:wrap;gap:4px;">' + roleLabels + '</div>';
       h += '</div>';
       h += '<div class="admin-staff-actions" style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:auto;">';
-      h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--green);color:#fff;">Edit</button>';
-      h += '<button class="btn btn-sm btn-danger" onclick="ds(\'' + s.id + '\',\'' + (s.photo_url || '') + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--red);color:#fff;">Delete</button>';
+      h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')" style="padding:4px 8px;font-size:0.75rem;">Edit</button>';
+      h += '<button class="btn btn-sm btn-danger" onclick="ds(\'' + s.id + '\',\'' + (s.photo_url || '') + '\')" style="padding:4px 8px;font-size:0.75rem;">Delete</button>';
       h += '</div></div>';
     });
 
@@ -887,8 +944,7 @@ async function rsf(c) {
 }
 
 function staffRoleKey(member) {
-  var rawRole = member.role_en || '';
-  return rawRole.split('|')[0].trim() || 'Other';
+  return getPrimaryRoleKeyAdmin(member);
 }
 
 function reorderStaffGroupPanels() {
@@ -934,17 +990,16 @@ function setupRoleDragDrop() {
       var list = document.getElementById('roleOrderList');
       if (!list) return;
       var dragEl = null;
-      var dropEl = this;
       list.querySelectorAll('.role-order-item').forEach(function(x) {
         if (x.dataset.role === dragRole) dragEl = x;
       });
       if (!dragEl) return;
       var all = Array.from(list.querySelectorAll('.role-order-item'));
       var dragIdx = all.indexOf(dragEl);
-      var dropIdx = all.indexOf(dropEl);
+      var dropIdx = all.indexOf(this);
       if (dragIdx < 0 || dropIdx < 0) return;
-      if (dragIdx < dropIdx) { list.insertBefore(dragEl, dropEl.nextSibling); }
-      else { list.insertBefore(dragEl, dropEl); }
+      if (dragIdx < dropIdx) { list.insertBefore(dragEl, this.nextSibling); }
+      else { list.insertBefore(dragEl, this); }
       reorderStaffGroupPanels();
       saveRoleOrder();
     });
@@ -958,14 +1013,30 @@ async function saveRoleOrder() {
     for (var i = 0; i < items.length; i++) {
       var roleKey = items[i].dataset.role;
       var priority = i + 1;
-      var members = allStaffMembers.filter(function(m) { return staffRoleKey(m) === roleKey; });
-      for (var j = 0; j < members.length; j++) {
-        var result = await supabaseClient.from('staff').update({ role_priority: priority }).eq('id', members[j].id);
+      for (var m = 0; m < allStaffMembers.length; m++) {
+        var member = allStaffMembers[m];
+        if (!memberHasRole(member, roleKey)) continue;
+        var roles = parseMemberRoles(member).map(function(r) {
+          if (r.role_en === roleKey) return Object.assign({}, r, { role_priority: priority });
+          return r;
+        });
+        roles.sort(function(a, b) { return a.role_priority - b.role_priority; });
+        var primary = roles[0];
+        var updateData = {
+          roles: roles,
+          role_priority: primary ? primary.role_priority : priority,
+          role_en: primary ? primary.role_en : member.role_en,
+          role_ge: primary ? primary.role_ge : member.role_ge,
+          badge_color: primary ? primary.badge_color : member.badge_color,
+          badge_text_color: primary ? primary.badge_text_color : member.badge_text_color
+        };
+        var result = await supabaseClient.from('staff').update(updateData).eq('id', member.id);
         if (result.error) {
           st('Error saving role order: ' + result.error.message, 'error');
           return;
         }
-        members[j].role_priority = priority;
+        member.roles = roles;
+        member.role_priority = primary ? primary.role_priority : priority;
       }
     }
     st('Role order saved!');
@@ -974,110 +1045,92 @@ async function saveRoleOrder() {
   }
 }
 
+function renderStaffRolesEditor() {
+  var container = document.getElementById('staffRolesContainer');
+  if (!container) return;
+  var html = '';
+  staffRolesFormList.forEach(function(role, idx) {
+    html += '<div class="staff-role-row" data-idx="' + idx + '">';
+    html += '<div class="form-row"><div class="form-group"><label>Role (EN) <span class="required">*</span></label>';
+    html += '<input class="form-control staff-role-en" value="' + escHtmlAttr(role.role_en) + '" required></div>';
+    html += '<div class="form-group"><label>Role (GE)</label>';
+    html += '<input class="form-control staff-role-ge" value="' + escHtmlAttr(role.role_ge) + '"></div></div>';
+    html += '<div class="form-row"><div class="form-group"><label>Badge Color</label>';
+    html += '<input type="color" class="staff-role-bg" value="' + (role.badge_color || '#4CAF50') + '" style="width:50px;height:38px;border:1px solid var(--gray-300);border-radius:4px;padding:2px;cursor:pointer;"></div>';
+    html += '<div class="form-group"><label>Text Color</label>';
+    html += '<input type="color" class="staff-role-tc" value="' + (role.badge_text_color || '#ffffff') + '" style="width:50px;height:38px;border:1px solid var(--gray-300);border-radius:4px;padding:2px;cursor:pointer;"></div></div>';
+    if (staffRolesFormList.length > 1) {
+      html += '<button type="button" class="btn btn-sm btn-danger" onclick="removeStaffRoleRow(' + idx + ')">Remove Role</button>';
+    }
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function addStaffRoleRow() {
+  staffRolesFormList.push({
+    role_en: '',
+    role_ge: '',
+    badge_color: '#4CAF50',
+    badge_text_color: '#ffffff',
+    role_priority: staffRolesFormList.length + 1
+  });
+  renderStaffRolesEditor();
+}
+
+function removeStaffRoleRow(idx) {
+  if (staffRolesFormList.length <= 1) return;
+  staffRolesFormList.splice(idx, 1);
+  renderStaffRolesEditor();
+}
+
+function collectStaffRolesFromForm() {
+  var rows = document.querySelectorAll('.staff-role-row');
+  var roles = [];
+  rows.forEach(function(row, i) {
+    var roleEn = row.querySelector('.staff-role-en').value.trim();
+    if (!roleEn) return;
+    roles.push({
+      role_en: roleEn,
+      role_ge: row.querySelector('.staff-role-ge').value.trim(),
+      badge_color: row.querySelector('.staff-role-bg').value,
+      badge_text_color: row.querySelector('.staff-role-tc').value,
+      role_priority: i + 1
+    });
+  });
+  return roles;
+}
+
 function ssf(id) {
   currentAction = id ? 'edit' : 'add';
   currentEditId = id;
   currentSelectedFile = null;
-  
-  // Dynamically build list of roles, default to only Founder
-  var uniqueRolesEn = ['Founder'];
-  var uniqueRolesGe = ['დამფუძნებელი'];
-
-  // Load custom roles from localStorage
-  try {
-    var savedEn = JSON.parse(localStorage.getItem('edugarden_custom_roles_en') || '[]');
-    savedEn.forEach(function(r) {
-      if (r && uniqueRolesEn.indexOf(r) === -1) uniqueRolesEn.push(r);
-    });
-    var savedGe = JSON.parse(localStorage.getItem('edugarden_custom_roles_ge') || '[]');
-    savedGe.forEach(function(r) {
-      if (r && uniqueRolesGe.indexOf(r) === -1) uniqueRolesGe.push(r);
-    });
-  } catch(e) {}
-  
-  // Also collect existing roles from active database records
-  allStaffMembers.forEach(function(member) {
-    var roleEn = (member.role_en || '').split('|')[0].trim();
-    if (roleEn && uniqueRolesEn.indexOf(roleEn) === -1) {
-      uniqueRolesEn.push(roleEn);
-    }
-    
-    var roleGe = (member.role_ge || '').split('|')[0].trim();
-    if (roleGe && uniqueRolesGe.indexOf(roleGe) === -1) {
-      uniqueRolesGe.push(roleGe);
-    }
-  });
+  staffRolesFormList = [{
+    role_en: 'Founder',
+    role_ge: 'დამფუძნებელი',
+    badge_color: '#b24060',
+    badge_text_color: '#ffffff',
+    role_priority: 1
+  }];
 
   var h = '<form id="sf">';
   h += '<div class="form-group"><label>Name *</label><input class="form-control" id="sn" required></div>';
-  
-  h += '<div class="form-row"><div class="form-group"><label>Role Category (EN)</label>';
-  h += '<select class="form-control" id="sre_cat">';
-  uniqueRolesEn.forEach(function(role) {
-    h += '<option value="' + role + '">' + role + '</option>';
-  });
-  h += '<option value="Other">Other (Custom)</option>';
-  h += '</select>';
-  h += '<input class="form-control" id="sre_custom" style="display:none; margin-top: 8px;" placeholder="Type custom role">';
-  h += '</div>';
-  
-  h += '<div class="form-group"><label>Role Category (GE)</label>';
-  h += '<select class="form-control" id="srg_cat">';
-  uniqueRolesGe.forEach(function(role) {
-    var label = role;
-    if (role === 'დამფუძნებელი') label = 'დამფუძნებელი (Founder)';
-    h += '<option value="' + role + '">' + label + '</option>';
-  });
-  h += '<option value="Other">Other (სხვა)</option>';
-  h += '</select>';
-  h += '<input class="form-control" id="srg_custom" style="display:none; margin-top: 8px;" placeholder="ჩაწერეთ სხვა როლი">';
-  h += '</div></div>';
-
-  h += '<div class="form-row">';
-  h += '<div class="form-group"><label>Role Badge Color</label>';
-  h += '<div style="display:flex; gap: 8px; align-items:center;">';
-  h += '<input type="color" id="s_badge_color" value="#4CAF50" style="width: 50px; height: 38px; border: 1px solid var(--gray-300); border-radius: 4px; padding: 2px; cursor: pointer;">';
-  h += '<span style="font-size:0.8rem; color:var(--gray-600);">Background color</span>';
-  h += '</div>';
-  h += '</div>';
-  h += '<div class="form-group"><label>Role Badge Text Color</label>';
-  h += '<div style="display:flex; gap: 8px; align-items:center;">';
-  h += '<input type="color" id="s_badge_text_color" value="#ffffff" style="width: 50px; height: 38px; border: 1px solid var(--gray-300); border-radius: 4px; padding: 2px; cursor: pointer;">';
-  h += '<span style="font-size:0.8rem; color:var(--gray-600);">Text color</span>';
-  h += '</div>';
-  h += '</div>';
-  h += '</div>';
-  
+  h += '<div class="form-group"><label>Roles</label><div id="staffRolesContainer"></div>';
+  h += '<button type="button" class="btn btn-sm btn-secondary" style="margin-top:8px" onclick="addStaffRoleRow()">+ Add Role</button></div>';
   h += '<div class="form-row"><div class="form-group"><label>Bio / Extra Info (EN)</label><textarea class="form-control" id="s_bio_en" placeholder="Bio for expanded view"></textarea></div>';
   h += '<div class="form-group"><label>Bio / Extra Info (GE)</label><textarea class="form-control" id="s_bio_ge" placeholder="ბიოგრაფია გაფართოებული ხედისთვის"></textarea></div></div>';
-
   h += '<div class="form-row"><div class="form-group"><label>Specialization (EN)</label><input class="form-control" id="s_spec_en" placeholder="e.g. Organic Gardening"></div>';
   h += '<div class="form-group"><label>Specialization (GE)</label><input class="form-control" id="s_spec_ge" placeholder="მაგ. ორგანული მებაღეობა"></div></div>';
-
-  h += '<div class="form-row">';
-  h += '<div class="form-group"><label>Location</label><input class="form-control" id="s_location" placeholder="e.g. Gori, Georgia"></div>';
-  h += '<div class="form-group"><label>Years at EduGarden</label><input class="form-control" type="number" id="s_years_at" min="0" placeholder="e.g. 3"></div>';
-  h += '</div>';
-  
+  h += '<div class="form-row"><div class="form-group"><label>Location</label><input class="form-control" id="s_location" placeholder="e.g. Gori, Georgia"></div>';
+  h += '<div class="form-group"><label>Years at EduGarden</label><input class="form-control" type="number" id="s_years_at" min="0" placeholder="e.g. 3"></div></div>';
   h += '<div class="form-group"><label>Photo *</label><div id="sImageUpload"></div></div>';
   h += '<div class="form-actions"><button class="btn btn-secondary" type="button" onclick="cm()">Cancel</button>';
   h += '<button class="btn btn-primary" type="submit">Save</button></div></form>';
-  
+
   om(id ? 'Edit Staff' : 'Add Staff');
   document.getElementById('modalBody').innerHTML = h;
-  
-  var sreCat = document.getElementById('sre_cat');
-  var sreCustom = document.getElementById('sre_custom');
-  sreCat.onchange = function() {
-    sreCustom.style.display = this.value === 'Other' ? 'block' : 'none';
-  };
-  
-  var srgCat = document.getElementById('srg_cat');
-  var srgCustom = document.getElementById('srg_custom');
-  srgCat.onchange = function() {
-    srgCustom.style.display = this.value === 'Other' ? 'block' : 'none';
-  };
-  
+  renderStaffRolesEditor();
+
   if (!id) {
     document.getElementById('sImageUpload').appendChild(cfu(null, function(f) { currentSelectedFile = f; }));
     document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
@@ -1087,40 +1140,17 @@ function ssf(id) {
       if (r.error || !r.data) { st('Error loading staff', 'error'); cm(); return; }
       var s = r.data;
       document.getElementById('sn').value = s.name || '';
-      
-      var partsEn = (s.role_en || '').split('|');
-      var roleEn = partsEn[0] || '';
-      var bioEn = s.bio_en || partsEn[1] || '';
-      
-      var partsGe = (s.role_ge || '').split('|');
-      var roleGe = partsGe[0] || '';
-      var bioGe = s.bio_ge || partsGe[1] || '';
-      
-      if (uniqueRolesEn.indexOf(roleEn) !== -1) {
-        sreCat.value = roleEn;
-      } else {
-        sreCat.value = 'Other';
-        sreCustom.value = roleEn;
-        sreCustom.style.display = 'block';
+      staffRolesFormList = parseMemberRoles(s);
+      if (!staffRolesFormList.length) {
+        staffRolesFormList = [{ role_en: '', role_ge: '', badge_color: '#4CAF50', badge_text_color: '#ffffff', role_priority: 1 }];
       }
-      
-      if (uniqueRolesGe.indexOf(roleGe) !== -1) {
-        srgCat.value = roleGe;
-      } else {
-        srgCat.value = 'Other';
-        srgCustom.value = roleGe;
-        srgCustom.style.display = 'block';
-      }
-      
-      document.getElementById('s_bio_en').value = bioEn;
-      document.getElementById('s_bio_ge').value = bioGe;
-      document.getElementById('s_badge_color').value = s.badge_color || '#4CAF50';
-      document.getElementById('s_badge_text_color').value = s.badge_text_color || '#ffffff';
+      renderStaffRolesEditor();
+      document.getElementById('s_bio_en').value = s.bio_en || '';
+      document.getElementById('s_bio_ge').value = s.bio_ge || '';
       document.getElementById('s_spec_en').value = s.specialization_en || '';
       document.getElementById('s_spec_ge').value = s.specialization_ge || '';
       document.getElementById('s_location').value = s.location || '';
       document.getElementById('s_years_at').value = s.years_at !== null && s.years_at !== undefined ? s.years_at : '';
-      
       document.getElementById('sImageUpload').appendChild(cfu(s.photo_url, function(f) { currentSelectedFile = f; }));
       document.getElementById('sf').onsubmit = function(e) { e.preventDefault(); ss(); };
     })();
@@ -1131,61 +1161,26 @@ async function ss() {
   var name = document.getElementById('sn').value.trim();
   if (!name) { st('Name field required', 'error'); return; }
   if (!currentSelectedFile && currentAction === 'add') { st('Photo required', 'error'); return; }
+  var roles = collectStaffRolesFromForm();
+  if (!roles.length) { st('At least one role (EN) required', 'error'); return; }
   try {
     var iu = null;
     if (currentSelectedFile) { iu = await ui(currentSelectedFile); if (!iu) return; }
-    
-    var sreCat = document.getElementById('sre_cat').value;
-    var roleEn = sreCat === 'Other' ? document.getElementById('sre_custom').value.trim() : sreCat;
-    var bioEn = document.getElementById('s_bio_en').value.trim();
-    
-    var srgCat = document.getElementById('srg_cat').value;
-    var roleGe = srgCat === 'Other' ? document.getElementById('srg_custom').value.trim() : srgCat;
-    var bioGe = document.getElementById('s_bio_ge').value.trim();
-    
-    var badgeColor = document.getElementById('s_badge_color').value;
-    var badgeTextColor = document.getElementById('s_badge_text_color').value;
-    
-    var specEn = document.getElementById('s_spec_en').value.trim();
-    var specGe = document.getElementById('s_spec_ge').value.trim();
-    
-    var location = document.getElementById('s_location').value.trim();
-    
-    var yearsAtInput = document.getElementById('s_years_at').value;
-    var yearsAt = yearsAtInput !== '' ? parseInt(yearsAtInput, 10) : null;
-    
-    // Save custom role to localStorage to save as reusable defaults
-    if (sreCat === 'Other' && roleEn) {
-      try {
-        var savedEn = JSON.parse(localStorage.getItem('edugarden_custom_roles_en') || '[]');
-        if (savedEn.indexOf(roleEn) === -1) {
-          savedEn.push(roleEn);
-          localStorage.setItem('edugarden_custom_roles_en', JSON.stringify(savedEn));
-        }
-      } catch(e) {}
-    }
-    if (srgCat === 'Other' && roleGe) {
-      try {
-        var savedGe = JSON.parse(localStorage.getItem('edugarden_custom_roles_ge') || '[]');
-        if (savedGe.indexOf(roleGe) === -1) {
-          savedGe.push(roleGe);
-          localStorage.setItem('edugarden_custom_roles_ge', JSON.stringify(savedGe));
-        }
-      } catch(e) {}
-    }
-
+    var primary = roles[0];
     var d = {
       name: name,
-      role_en: roleEn,
-      role_ge: roleGe,
-      bio_en: bioEn,
-      bio_ge: bioGe,
-      badge_color: badgeColor,
-      badge_text_color: badgeTextColor,
-      specialization_en: specEn || null,
-      specialization_ge: specGe || null,
-      location: location || null,
-      years_at: yearsAt
+      roles: roles,
+      role_en: primary.role_en,
+      role_ge: primary.role_ge,
+      bio_en: document.getElementById('s_bio_en').value.trim(),
+      bio_ge: document.getElementById('s_bio_ge').value.trim(),
+      badge_color: primary.badge_color,
+      badge_text_color: primary.badge_text_color,
+      role_priority: primary.role_priority,
+      specialization_en: document.getElementById('s_spec_en').value.trim() || null,
+      specialization_ge: document.getElementById('s_spec_ge').value.trim() || null,
+      location: document.getElementById('s_location').value.trim() || null,
+      years_at: document.getElementById('s_years_at').value !== '' ? parseInt(document.getElementById('s_years_at').value, 10) : null
     };
     if (iu) d.photo_url = iu;
     var result;
@@ -1260,41 +1255,132 @@ function dtp(id, iu) {
 // ============================================================
 // 5. MESSAGES
 // ============================================================
+function buildMessageItemHtml(m) {
+  var d = new Date(m.created_at).toLocaleString();
+  var isUnread = !m.is_read;
+  var h = '<div class="message-item' + (isUnread ? ' unread' : '') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
+  h += '<div class="msg-header"><span class="msg-name">' + escHtmlAttr(m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
+  h += '<div class="msg-preview">' + escHtmlAttr(m.email || '') + '</div>';
+  h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + escHtmlAttr(m.email) : '') + '</strong><br>' + escHtmlAttr(m.message || '') + '</div>';
+  h += '<div class="msg-actions">';
+  h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\', this)">' + (isUnread ? 'Mark Read' : 'Mark Unread') + '</button>';
+  h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\', this)">&#x1F5D1;&#xFE0F; Delete</button>';
+  h += '</div></div>';
+  return h;
+}
+
+function updateMessageHeadings() {
+  var unreadCountLocal = allMessages.filter(function(m) { return !m.is_read; }).length;
+  var readCountLocal = allMessages.filter(function(m) { return m.is_read; }).length;
+  var newHeading = document.getElementById('newMessagesHeading');
+  var readHeading = document.getElementById('readMessagesHeading');
+  if (newHeading) newHeading.textContent = 'New Messages (' + unreadCountLocal + ')';
+  if (readHeading) {
+    var readList = document.getElementById('readMessagesList');
+    var isExpanded = readList && readList.style.display !== 'none';
+    readHeading.innerHTML = 'Read Messages (' + readCountLocal + ') <span id="readToggleIcon">' + (isExpanded ? '▼' : '▶') + '</span>';
+    readHeading.onclick = toggleReadMessages;
+  }
+}
+
+function renderMessagesLists() {
+  var newList = document.getElementById('newMessagesList');
+  var readList = document.getElementById('readMessagesList');
+  if (!newList || !readList) return;
+  var unread = allMessages.filter(function(m) { return !m.is_read; });
+  var read = allMessages.filter(function(m) { return m.is_read; });
+  newList.innerHTML = unread.length ? unread.map(buildMessageItemHtml).join('') : '<p style="padding:16px;color:var(--gray-500);text-align:center;">No new messages.</p>';
+  readList.innerHTML = read.length ? read.map(buildMessageItemHtml).join('') : '<p style="padding:16px;color:var(--gray-500);text-align:center;">No read messages.</p>';
+  updateMessageHeadings();
+}
+
+function setupMessagesSubscription() {
+  if (messagesChannel) return;
+  messagesChannel = supabaseClient.channel('admin-contact-messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, function(payload) {
+      if (!payload.new) return;
+      var exists = allMessages.some(function(m) { return m.id === payload.new.id; });
+      if (exists) return;
+      allMessages.unshift(payload.new);
+      if (currentSection === 'messages') renderMessagesLists();
+      updateUnreadBadge();
+    })
+    .subscribe();
+}
+
+function teardownMessagesSubscription() {
+  if (messagesChannel) {
+    supabaseClient.removeChannel(messagesChannel);
+    messagesChannel = null;
+  }
+}
+
 async function rm(c) {
+  teardownMessagesSubscription();
   var r = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
-  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>'; return; }
-  var h = '';
-  for (var i = 0; i < r.data.length; i++) {
-    var m = r.data[i];
-    var d = new Date(m.created_at).toLocaleString();
-    h += '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
-    h += '<div class="msg-header"><span class="msg-name">' + (m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
-    h += '<div class="msg-preview">' + (m.email || '') + '</div>';
-    h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
-    h += '<div class="msg-actions">';
-    h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
-    h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
-    h += '</div></div>';
+  allMessages = r.data || [];
+  if (!allMessages.length) {
+    c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>';
+    setupMessagesSubscription();
+    return;
   }
+  var unreadCountLocal = allMessages.filter(function(m) { return !m.is_read; }).length;
+  var readCountLocal = allMessages.filter(function(m) { return m.is_read; }).length;
+  var h = '<div class="messages-section"><h3 id="newMessagesHeading">New Messages (' + unreadCountLocal + ')</h3>';
+  h += '<div id="newMessagesList"></div></div>';
+  h += '<div class="messages-section">';
+  h += '<h3 id="readMessagesHeading" class="read-messages-toggle" onclick="toggleReadMessages()">Read Messages (' + readCountLocal + ') <span id="readToggleIcon">▶</span></h3>';
+  h += '<div id="readMessagesList" style="display:none"></div></div>';
   c.innerHTML = h;
+  renderMessagesLists();
+  setupMessagesSubscription();
 }
 
 function toggleMsg(el) { el.classList.toggle('expanded'); }
 
-async function mr(id) {
-  var el = document.querySelector('.message-item[data-id="' + id + '"]');
-  var isRead = !el.classList.contains('unread');
-  await supabaseClient.from('contact_messages').update({ is_read: !isRead }).eq('id', id);
-  el.classList.toggle('unread');
-  rs('messages');
+function toggleReadMessages() {
+  var list = document.getElementById('readMessagesList');
+  var icon = document.getElementById('readToggleIcon');
+  if (!list) return;
+  var show = list.style.display === 'none';
+  list.style.display = show ? 'block' : 'none';
+  if (icon) icon.textContent = show ? '▼' : '▶';
 }
 
-async function dmsg(id) {
+async function mr(id, btn) {
+  var el = btn ? btn.closest('.message-item') : document.querySelector('.message-item[data-id="' + id + '"]');
+  if (!el) return;
+  var currentlyUnread = el.classList.contains('unread');
+  var newIsRead = currentlyUnread;
+  var result = await supabaseClient.from('contact_messages').update({ is_read: newIsRead }).eq('id', id);
+  if (result.error) { st('Error: ' + result.error.message, 'error'); return; }
+  var msg = allMessages.find(function(m) { return m.id === id; });
+  if (msg) msg.is_read = newIsRead;
+  el.classList.toggle('unread', !newIsRead);
+  var markBtn = el.querySelector('.msg-actions .btn-primary');
+  if (markBtn) markBtn.textContent = newIsRead ? 'Mark Unread' : 'Mark Read';
+  var newList = document.getElementById('newMessagesList');
+  var readList = document.getElementById('readMessagesList');
+  if (newIsRead && newList && readList) {
+    readList.insertBefore(el, readList.firstChild);
+  } else if (!newIsRead && newList && readList) {
+    newList.insertBefore(el, newList.firstChild);
+  }
+  updateMessageHeadings();
+  updateUnreadBadge();
+}
+
+async function dmsg(id, btn) {
   sc('Delete Message?', 'This cannot be undone.', async function() {
-    await supabaseClient.from('contact_messages').delete().eq('id', id);
+    var result = await supabaseClient.from('contact_messages').delete().eq('id', id);
+    if (result.error) { st('Error: ' + result.error.message, 'error'); return; }
+    allMessages = allMessages.filter(function(m) { return m.id !== id; });
+    var el = btn ? btn.closest('.message-item') : document.querySelector('.message-item[data-id="' + id + '"]');
+    if (el) el.remove();
+    updateMessageHeadings();
+    updateUnreadBadge();
     st('Deleted!');
-    rs('messages');
   });
 }
 
