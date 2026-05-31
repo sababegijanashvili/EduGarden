@@ -115,6 +115,14 @@
     @media(max-width:768px){.sidebar{width:60px}.sidebar-item span:not(.icon){display:none}.sidebar-brand span{display:none}.form-row{grid-template-columns:1fr}.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr}.header h2{font-size:1rem}.content{padding:16px}}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gray-400);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--gray-500)}
     .staff-dragging{opacity:.5}.staff-drag-over{border-top:3px solid var(--green)}
+    .role-order-panel{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:24px;border:1px solid var(--gray-200)}
+    .role-order-panel h3{font-size:1rem;font-weight:700;color:var(--gray-800);margin-bottom:12px}
+    .role-order-list{display:flex;flex-direction:column;gap:8px;max-width:420px}
+    .role-order-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);cursor:grab;user-select:none;transition:background var(--transition),border-color var(--transition)}
+    .role-order-item:active{cursor:grabbing}
+    .role-order-item:hover{background:var(--gray-100)}
+    .role-drag-handle{font-size:1.25rem;color:var(--gray-500);line-height:1;flex-shrink:0;cursor:grab}
+    .role-order-label{font-weight:600;color:var(--gray-800);flex:1}
   </style>
 </head>
 <body>
@@ -143,7 +151,6 @@ let unreadCount = 0;
 let currentSelectedFile = null;
 let contentImagesList = [];
 let originalBannerUrl = '';
-let staffOrderChanged = false;
 let allStaffMembers = [];
 let dashboardInjected = false;
 var sectionNames = { articles:'Articles', roses:'Rose Catalog', adr_roses:'ADR Roses', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
@@ -826,16 +833,32 @@ async function rsf(c) {
     groups[roleKey].push(member);
   });
 
+  function escRoleAttr(role) {
+    return (role || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
   var h = '';
-  roleOrder.forEach(roleKey => {
-    h += '<div class="staff-group-panel" style="background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);padding:24px 32px;margin-bottom:32px;border:1.5px solid rgba(0,0,0,0.04);">';
-    h += '<h3 style="font-size:1.25rem;font-weight:700;color:var(--green-dark);margin-bottom:20px;padding-bottom:8px;border-bottom:2px solid var(--green-light);display:inline-block;">' + roleKey + '</h3>';
+  h += '<div class="role-order-panel">';
+  h += '<h3>Role Order (drag to reorder)</h3>';
+  h += '<div class="role-order-list" id="roleOrderList">';
+  roleOrder.forEach(function(roleKey) {
+    h += '<div class="role-order-item" draggable="true" data-role="' + escRoleAttr(roleKey) + '">';
+    h += '<span class="role-drag-handle" aria-hidden="true">⠿</span>';
+    h += '<span class="role-order-label">' + escRoleAttr(roleKey) + '</span>';
+    h += '</div>';
+  });
+  h += '</div></div>';
+
+  h += '<div id="staffGroupsContainer">';
+  roleOrder.forEach(function(roleKey) {
+    h += '<div class="staff-group-panel" data-role="' + escRoleAttr(roleKey) + '" style="background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);padding:24px 32px;margin-bottom:32px;border:1.5px solid rgba(0,0,0,0.04);">';
+    h += '<h3 style="font-size:1.25rem;font-weight:700;color:var(--green-dark);margin-bottom:20px;padding-bottom:8px;border-bottom:2px solid var(--green-light);display:inline-block;">' + escRoleAttr(roleKey) + '</h3>';
     h += '<div class="staff-group-cards" style="display:flex;flex-wrap:wrap;gap:16px;">';
-    
-    groups[roleKey].forEach(s => {
+
+    groups[roleKey].forEach(function(s) {
       var roleParts = (s.role_en || '').split('|');
       var roleName = roleParts[0] || '';
-      
+
       var badgeStyle = 'font-size:0.75rem;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px;font-weight:600;width:fit-content;';
       if (s.badge_color) {
         badgeStyle += 'background:' + s.badge_color + ';color:' + (s.badge_text_color || '#ffffff') + ';';
@@ -844,60 +867,111 @@ async function rsf(c) {
         badgeStyle += 'background:' + (isFounder ? '#b24060' : '#8d6e63') + ';color:#ffffff;';
       }
 
-      h += '<div class="admin-staff-card item-card" draggable="true" data-id="' + s.id + '" data-order="' + (s.order_index || 0) + '" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f7f7f9;border-radius:16px;border:1px solid rgba(0,0,0,0.03);width:320px;max-width:100%;box-sizing:border-box;transition:transform 0.2s, box-shadow 0.2s;">';
-      h += '<img src="' + s.photo_url + '" alt="' + (s.name || '') + '" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);">';
+      h += '<div class="admin-staff-card item-card" data-id="' + s.id + '" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f7f7f9;border-radius:16px;border:1px solid rgba(0,0,0,0.03);width:320px;max-width:100%;box-sizing:border-box;transition:transform 0.2s, box-shadow 0.2s;">';
+      h += '<img src="' + s.photo_url + '" alt="' + escRoleAttr(s.name || '') + '" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.08);">';
       h += '<div class="admin-staff-info" style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;">';
-      h += '<h4 style="font-size:0.95rem;font-weight:700;color:var(--green-dark);margin-bottom:2px;overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + (s.name || '') + '</h4>';
-      h += '<span style="' + badgeStyle + '">' + roleName + '</span>';
+      h += '<h4 style="font-size:0.95rem;font-weight:700;color:var(--green-dark);margin-bottom:2px;overflow:hidden;line-height:1.2;word-break:break-word;white-space:normal;">' + escRoleAttr(s.name || '') + '</h4>';
+      h += '<span style="' + badgeStyle + '">' + escRoleAttr(roleName) + '</span>';
       h += '</div>';
       h += '<div class="admin-staff-actions" style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:auto;">';
       h += '<button class="btn btn-sm btn-primary" onclick="ssf(\'' + s.id + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--green);color:#fff;">Edit</button>';
       h += '<button class="btn btn-sm btn-danger" onclick="ds(\'' + s.id + '\',\'' + (s.photo_url || '') + '\')" style="padding:4px 8px;font-size:0.75rem;border-radius:6px;background:var(--red);color:#fff;">Delete</button>';
       h += '</div></div>';
     });
-    
+
     h += '</div></div>';
   });
+  h += '</div>';
   c.innerHTML = h;
-  setupDragDrop();
+  setupRoleDragDrop();
 }
 
-function setupDragDrop() {
-  var items = document.querySelectorAll('.item-card[draggable]');
+function staffRoleKey(member) {
+  var rawRole = member.role_en || '';
+  return rawRole.split('|')[0].trim() || 'Other';
+}
+
+function reorderStaffGroupPanels() {
+  var roleList = document.querySelectorAll('.role-order-item');
+  var container = document.getElementById('staffGroupsContainer');
+  if (!container) return;
+  roleList.forEach(function(item) {
+    var role = item.dataset.role;
+    var panels = container.querySelectorAll('.staff-group-panel');
+    for (var i = 0; i < panels.length; i++) {
+      if (panels[i].dataset.role === role) {
+        container.appendChild(panels[i]);
+        break;
+      }
+    }
+  });
+}
+
+function setupRoleDragDrop() {
+  var items = document.querySelectorAll('.role-order-item[draggable]');
   items.forEach(function(el) {
-    el.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', this.dataset.id); this.classList.add('staff-dragging'); });
-    el.addEventListener('dragend', function() { this.classList.remove('staff-dragging'); });
-    el.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('staff-drag-over'); });
+    el.addEventListener('dragstart', function(e) {
+      e.dataTransfer.setData('text/plain', this.dataset.role);
+      e.dataTransfer.effectAllowed = 'move';
+      this.classList.add('staff-dragging');
+    });
+    el.addEventListener('dragend', function() {
+      this.classList.remove('staff-dragging');
+      document.querySelectorAll('.role-order-item.staff-drag-over').forEach(function(x) { x.classList.remove('staff-drag-over'); });
+    });
+    el.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.classList.add('staff-drag-over');
+    });
     el.addEventListener('dragleave', function() { this.classList.remove('staff-drag-over'); });
     el.addEventListener('drop', function(e) {
-      e.preventDefault(); this.classList.remove('staff-drag-over');
-      var dragId = e.dataTransfer.getData('text/plain');
-      var dropId = this.dataset.id;
-      if (dragId === dropId) return;
-      var all = document.querySelectorAll('.item-card[draggable]');
-      var ids = Array.from(all).map(function(x) { return x.dataset.id; });
-      var dragIdx = ids.indexOf(dragId);
-      var dropIdx = ids.indexOf(dropId);
+      e.preventDefault();
+      this.classList.remove('staff-drag-over');
+      var dragRole = e.dataTransfer.getData('text/plain');
+      var dropRole = this.dataset.role;
+      if (!dragRole || dragRole === dropRole) return;
+      var list = document.getElementById('roleOrderList');
+      if (!list) return;
+      var dragEl = null;
+      var dropEl = this;
+      list.querySelectorAll('.role-order-item').forEach(function(x) {
+        if (x.dataset.role === dragRole) dragEl = x;
+      });
+      if (!dragEl) return;
+      var all = Array.from(list.querySelectorAll('.role-order-item'));
+      var dragIdx = all.indexOf(dragEl);
+      var dropIdx = all.indexOf(dropEl);
       if (dragIdx < 0 || dropIdx < 0) return;
-      var parent = this.parentNode;
-      var dragEl = parent.querySelector('[data-id="' + dragId + '"]');
-      if (dragIdx < dropIdx) { parent.insertBefore(dragEl, this.nextSibling); }
-      else { parent.insertBefore(dragEl, this); }
-      staffOrderChanged = true;
-      saveStaffOrder();
+      if (dragIdx < dropIdx) { list.insertBefore(dragEl, dropEl.nextSibling); }
+      else { list.insertBefore(dragEl, dropEl); }
+      reorderStaffGroupPanels();
+      saveRoleOrder();
     });
   });
 }
 
-async function saveStaffOrder() {
-  if (!staffOrderChanged) return;
-  var items = document.querySelectorAll('.item-card[draggable]');
-  var updates = [];
-  items.forEach(function(el, i) { updates.push({ id: el.dataset.id, order_index: i }); });
-  for (var i = 0; i < updates.length; i++) {
-    await supabaseClient.from('staff').update({ order_index: updates[i].order_index }).eq('id', updates[i].id);
+async function saveRoleOrder() {
+  var items = document.querySelectorAll('.role-order-item');
+  if (!items.length) return;
+  try {
+    for (var i = 0; i < items.length; i++) {
+      var roleKey = items[i].dataset.role;
+      var priority = i + 1;
+      var members = allStaffMembers.filter(function(m) { return staffRoleKey(m) === roleKey; });
+      for (var j = 0; j < members.length; j++) {
+        var result = await supabaseClient.from('staff').update({ role_priority: priority }).eq('id', members[j].id);
+        if (result.error) {
+          st('Error saving role order: ' + result.error.message, 'error');
+          return;
+        }
+        members[j].role_priority = priority;
+      }
+    }
+    st('Role order saved!');
+  } catch(e) {
+    st('Error saving role order: ' + e.message, 'error');
   }
-  staffOrderChanged = false;
 }
 
 function ssf(id) {
