@@ -1,8 +1,81 @@
 // js/staff.js – Fetch and render staff members dynamically
 (function () {
-  // Helper to determine current language ('en' or 'ge')
+  var rolesLibrary = [];
+
   function getCurrentLang() {
     return document.body.classList.contains('georgian') ? 'ge' : 'en';
+  }
+
+  function formatRoleLabel(role, lang) {
+    if (!role) return lang === 'ge' ? 'სხვა' : 'Other';
+    var en = (role.role_en || '').trim();
+    var ge = (role.role_ge || '').trim();
+    if (ge && en) return ge + ' (' + en + ')';
+    return en || ge || (lang === 'ge' ? 'სხვა' : 'Other');
+  }
+
+  function formatRoleBadgeText(role, lang) {
+    if (!role) return '';
+    if (lang === 'ge') return (role.role_ge || '').trim() || (role.role_en || '').trim();
+    return (role.role_en || '').trim() || (role.role_ge || '').trim();
+  }
+
+  function getMemberRoleIds(member) {
+    if (!member.roles) return [];
+    if (Array.isArray(member.roles)) {
+      return member.roles.map(function (entry) {
+        if (typeof entry === 'string') return entry;
+        if (entry && entry.id) return entry.id;
+        return null;
+      }).filter(Boolean);
+    }
+    return [];
+  }
+
+  function getMemberRolesResolved(member) {
+    var lang = getCurrentLang();
+    var ids = getMemberRoleIds(member);
+    var resolved = [];
+
+    if (ids.length) {
+      ids.forEach(function (id) {
+        var role = rolesLibrary.find(function (r) { return r.id === id; });
+        if (role) resolved.push(role);
+      });
+    }
+
+    if (!resolved.length && (member.role_en || member.role_ge)) {
+      var roleEn = (member.role_en || '').split('|')[0].trim();
+      var roleGe = (member.role_ge || '').split('|')[0].trim();
+      var match = rolesLibrary.find(function (r) { return r.role_en === roleEn; });
+      if (match) {
+        resolved.push(match);
+      } else {
+        resolved.push({
+          id: null,
+          role_en: roleEn,
+          role_ge: roleGe,
+          badge_color: member.badge_color || '#8d6e63',
+          badge_text_color: member.badge_text_color || '#ffffff',
+          priority: member.role_priority != null ? member.role_priority : 999
+        });
+      }
+    }
+
+    resolved.sort(function (a, b) {
+      return (a.priority != null ? a.priority : 999) - (b.priority != null ? b.priority : 999);
+    });
+    return resolved;
+  }
+
+  function getPrimaryRole(member) {
+    var roles = getMemberRolesResolved(member);
+    return roles.length ? roles[0] : null;
+  }
+
+  function getPrimaryRoleId(member) {
+    var primary = getPrimaryRole(member);
+    return primary && primary.id ? primary.id : (primary ? primary.role_en : 'Other');
   }
 
   let activePopover = null;
@@ -16,88 +89,87 @@
     }
   }
 
-  function showPopover(card, member, bioText, roleName) {
+  function showPopover(card, member, bioText) {
     if (activeCard === card) {
       closeActivePopover();
       return;
     }
     closeActivePopover();
 
-    const lang = getCurrentLang();
-    const popover = document.createElement('div');
+    var lang = getCurrentLang();
+    var memberRoles = getMemberRolesResolved(member);
+    var popover = document.createElement('div');
     popover.className = 'staff-popover';
-    
-    // Header
-    const header = document.createElement('div');
+
+    var header = document.createElement('div');
     header.className = 'staff-popover-header';
 
-    const avatarWrap = document.createElement('div');
+    var avatarWrap = document.createElement('div');
     avatarWrap.className = 'staff-popover-avatar-wrap';
-    const img = document.createElement('img');
+    var img = document.createElement('img');
     img.src = member.photo_url || '';
     img.alt = member.name || '';
     img.className = 'staff-popover-avatar';
     avatarWrap.appendChild(img);
     header.appendChild(avatarWrap);
 
-    const details = document.createElement('div');
+    var details = document.createElement('div');
     details.className = 'staff-popover-details';
 
-    const badges = document.createElement('div');
-    badges.className = 'staff-popover-badges';
-
-    const roleBadge = document.createElement('span');
-    roleBadge.className = 'staff-popover-badge role-badge';
-    roleBadge.textContent = roleName;
-    
-    // Use DB colors if available
-    const isFounder = roleName === 'Founder' || roleName === 'დამფუძნებელი';
-    const defaultRoleColor = isFounder ? '#b24060' : '#8d6e63';
-    const defaultTextColor = '#ffffff';
-    roleBadge.style.backgroundColor = member.badge_color || defaultRoleColor;
-    roleBadge.style.color = member.badge_text_color || defaultTextColor;
-    badges.appendChild(roleBadge);
-
-    const staffBadge = document.createElement('span');
-    staffBadge.className = 'staff-popover-badge staff-member-badge';
-    staffBadge.textContent = lang === 'ge' ? 'გუნდის წევრი' : 'Staff Member';
-    badges.appendChild(staffBadge);
-    details.appendChild(badges);
-
-    const name = document.createElement('div');
+    var name = document.createElement('div');
     name.className = 'staff-popover-name';
     name.textContent = member.name || '';
     details.appendChild(name);
 
-    const subtext = document.createElement('div');
-    subtext.className = 'staff-popover-subtext';
-    subtext.textContent = lang === 'ge' ? 'EduGarden-ის დამფუძნებელი გუნდი' : 'EduGarden Founding Team';
-    details.appendChild(subtext);
+    var badges = document.createElement('div');
+    badges.className = 'staff-popover-badges';
+
+    memberRoles.forEach(function (role) {
+      var roleBadge = document.createElement('span');
+      roleBadge.className = 'staff-popover-badge role-badge';
+      roleBadge.textContent = formatRoleBadgeText(role, lang);
+      roleBadge.style.backgroundColor = role.badge_color || '#8d6e63';
+      roleBadge.style.color = role.badge_text_color || '#ffffff';
+      badges.appendChild(roleBadge);
+    });
+
+    var teamBadge = document.createElement('span');
+    teamBadge.className = 'staff-popover-badge staff-member-badge';
+    teamBadge.textContent = lang === 'ge' ? 'გუნდის წევრი' : 'Team Member';
+    badges.appendChild(teamBadge);
+    details.appendChild(badges);
 
     header.appendChild(details);
     popover.appendChild(header);
 
-    // Stats (displayed above bio, as simple rows)
-    const stats = document.createElement('div');
+    var bioVal = (lang === 'ge' ? member.bio_ge : member.bio_en) || bioText;
+    if (bioVal) {
+      var bio = document.createElement('div');
+      bio.className = 'staff-popover-bio';
+      bio.textContent = bioVal;
+      popover.appendChild(bio);
+    }
+
+    var stats = document.createElement('div');
     stats.className = 'staff-popover-stats';
 
-    const yearsVal = member.years_at !== null && member.years_at !== undefined ? member.years_at : '-';
-    const specVal = lang === 'ge' ? (member.specialization_ge || '-') : (member.specialization_en || '-');
-    const locVal = member.location || '-';
+    var yearsVal = member.years_at !== null && member.years_at !== undefined ? member.years_at : '-';
+    var specVal = lang === 'ge' ? (member.specialization_ge || '-') : (member.specialization_en || '-');
+    var locVal = member.location || '-';
 
-    const statData = [
-      { label: lang === 'ge' ? 'წლები EduGarden-ში' : 'Years at EduGarden', val: yearsVal },
+    var statData = [
+      { label: lang === 'ge' ? 'წლები' : 'Years', val: yearsVal },
       { label: lang === 'ge' ? 'სპეციალიზაცია' : 'Specialization', val: specVal },
       { label: lang === 'ge' ? 'მდებარეობა' : 'Location', val: locVal }
     ];
 
-    statData.forEach(item => {
-      const statItem = document.createElement('div');
+    statData.forEach(function (item) {
+      var statItem = document.createElement('div');
       statItem.className = 'staff-popover-stat-item';
-      const statLabel = document.createElement('span');
+      var statLabel = document.createElement('span');
       statLabel.className = 'staff-popover-stat-label';
       statLabel.textContent = item.label;
-      const statValue = document.createElement('span');
+      var statValue = document.createElement('span');
       statValue.className = 'staff-popover-stat-value';
       statValue.textContent = item.val;
       statItem.appendChild(statLabel);
@@ -106,54 +178,36 @@
     });
     popover.appendChild(stats);
 
-    // Bio (displayed below stats)
-    const bioVal = (lang === 'ge' ? member.bio_ge : member.bio_en) || bioText;
-    if (bioVal) {
-      const bio = document.createElement('div');
-      bio.className = 'staff-popover-bio';
-      bio.textContent = bioVal;
-      popover.appendChild(bio);
-    }
-
     document.body.appendChild(popover);
     activePopover = popover;
     activeCard = card;
 
     function updatePosition() {
       if (!activePopover || activeCard !== card) return;
-      const rect = card.getBoundingClientRect();
-      const popoverWidth = popover.offsetWidth;
-      const popoverHeight = popover.offsetHeight;
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-
-      const cardCenterX = rect.left + scrollLeft + rect.width / 2;
-      const popoverTop = rect.top + scrollTop - popoverHeight - 12; // 12px gap
-      let popoverLeft = cardCenterX - popoverWidth / 2;
-
-      const windowMargin = 10;
-      const maxLeft = window.innerWidth - popoverWidth - windowMargin;
-      if (popoverLeft < windowMargin) {
-        popoverLeft = windowMargin;
-      } else if (popoverLeft > maxLeft) {
-        popoverLeft = maxLeft;
-      }
-
-      const relativeArrowLeft = cardCenterX - popoverLeft;
-      popover.style.setProperty('--arrow-left', `${relativeArrowLeft}px`);
-
-      popover.style.top = `${popoverTop}px`;
-      popover.style.left = `${popoverLeft}px`;
+      var rect = card.getBoundingClientRect();
+      var popoverWidth = popover.offsetWidth;
+      var popoverHeight = popover.offsetHeight;
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      var cardCenterX = rect.left + scrollLeft + rect.width / 2;
+      var popoverTop = rect.top + scrollTop - popoverHeight - 12;
+      var popoverLeft = cardCenterX - popoverWidth / 2;
+      var windowMargin = 10;
+      var maxLeft = window.innerWidth - popoverWidth - windowMargin;
+      if (popoverLeft < windowMargin) popoverLeft = windowMargin;
+      else if (popoverLeft > maxLeft) popoverLeft = maxLeft;
+      popover.style.setProperty('--arrow-left', (cardCenterX - popoverLeft) + 'px');
+      popover.style.top = popoverTop + 'px';
+      popover.style.left = popoverLeft + 'px';
     }
 
     updatePosition();
-    popover.addEventListener('click', (e) => e.stopPropagation());
+    popover.addEventListener('click', function (e) { e.stopPropagation(); });
   }
 
-  // Dismiss listeners
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', function (e) {
     if (activePopover) {
-      const clickedCard = e.target.closest('.staff-compact-card');
+      var clickedCard = e.target.closest('.staff-compact-card');
       if (!clickedCard && !e.target.closest('.staff-popover')) {
         closeActivePopover();
       }
@@ -163,129 +217,132 @@
   window.addEventListener('resize', closeActivePopover);
   window.addEventListener('scroll', closeActivePopover, { passive: true });
 
-  // Render staff grid into #staff-section
   function renderStaff() {
     closeActivePopover();
-    const container = document.getElementById('staff-section');
+    var container = document.getElementById('staff-section');
     if (!container) return;
 
-    // Ensure supabase client is ready
     if (!window.supabaseClient) {
-      // retry after short delay
       setTimeout(renderStaff, 300);
       return;
     }
 
-    // Show loading placeholder
     container.innerHTML = '<div class="loading">Loading staff...</div>';
 
-    window.supabaseClient
-      .from('staff')
-      .select('*')
-      .order('role_priority', { ascending: true })
-      .order('order_index', { ascending: true })
-      .then(({ data, error }) => {
-        container.innerHTML = '';
-        if (error) {
-          const errDiv = document.createElement('div');
-          errDiv.textContent = 'Error loading staff: ' + error.message;
-          errDiv.style.color = 'red';
-          container.appendChild(errDiv);
-          return;
-        }
-        if (!data || data.length === 0) {
-          const emptyDiv = document.createElement('div');
-          emptyDiv.textContent = 'No staff members found.';
-          container.appendChild(emptyDiv);
-          return;
-        }
-        
-        const lang = getCurrentLang();
-        
-        // Group staff by their role
-        const groups = {};
-        const roleOrder = [];
-        data.forEach(member => {
-          const rawRole = member.role_en || '';
-          const roleKey = rawRole.split('|')[0].trim() || (lang === 'ge' ? 'სხვა' : 'Other');
-          if (!groups[roleKey]) {
-            groups[roleKey] = [];
-            roleOrder.push(roleKey);
-          }
-          groups[roleKey].push(member);
-        });
+    Promise.all([
+      window.supabaseClient.from('roles').select('*').order('priority', { ascending: true }),
+      window.supabaseClient.from('staff').select('*').order('order_index', { ascending: true })
+    ]).then(function (results) {
+      var rolesResult = results[0];
+      var staffResult = results[1];
+      container.innerHTML = '';
 
-        // Render each group
-        roleOrder.forEach(roleKey => {
-          const firstMember = groups[roleKey][0];
-          const rawRoleGe = firstMember.role_ge || '';
-          const displayRole = lang === 'ge' ? (rawRoleGe.split('|')[0].trim() || roleKey) : roleKey;
+      if (rolesResult.error) {
+        container.innerHTML = '<div style="color:red">Error loading roles: ' + rolesResult.error.message + '</div>';
+        return;
+      }
+      if (staffResult.error) {
+        container.innerHTML = '<div style="color:red">Error loading staff: ' + staffResult.error.message + '</div>';
+        return;
+      }
 
-          const groupCard = document.createElement('div');
-          groupCard.className = 'staff-group-panel';
-          
-          const roleHeader = document.createElement('h3');
-          roleHeader.className = 'staff-group-header';
-          roleHeader.textContent = displayRole;
-          groupCard.appendChild(roleHeader);
+      rolesLibrary = rolesResult.data || [];
+      var data = staffResult.data || [];
+      var lang = getCurrentLang();
 
-          const cardsContainer = document.createElement('div');
-          cardsContainer.className = 'staff-group-cards';
+      if (!data.length) {
+        container.textContent = 'No staff members found.';
+        return;
+      }
 
-          groups[roleKey].forEach(member => {
-            const roleParts = (lang === 'ge' ? (member.role_ge || member.role_en || '') : (member.role_en || '')).split('|');
-            const roleName = roleParts[0] || '';
-            const bioText = roleParts[1] || '';
-            const hasBio = member.bio_en || member.bio_ge || bioText;
-
-            const card = document.createElement('div');
-            card.className = 'staff-compact-card';
-            
-            if (hasBio) {
-              card.classList.add('has-bio');
-              card.title = lang === 'ge' ? 'დააწკაპუნეთ მეტი ინფორმაციისთვის' : 'Click to learn more';
-              card.onclick = function(e) {
-                e.stopPropagation();
-                showPopover(card, member, bioText, roleName);
-              };
-            }
-
-            const topDiv = document.createElement('div');
-            topDiv.className = 'staff-card-top';
-
-            const img = document.createElement('img');
-            img.src = member.photo_url || '';
-            img.alt = member.name || '';
-            img.className = 'staff-compact-photo';
-            topDiv.appendChild(img);
-
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'staff-compact-info';
-
-            const nameDiv = document.createElement('div');
-            nameDiv.className = 'staff-compact-name';
-            nameDiv.textContent = member.name || '';
-            infoDiv.appendChild(nameDiv);
-
-            const roleDiv = document.createElement('div');
-            roleDiv.className = 'staff-compact-role';
-            roleDiv.textContent = roleName;
-            infoDiv.appendChild(roleDiv);
-
-            topDiv.appendChild(infoDiv);
-            card.appendChild(topDiv);
-            cardsContainer.appendChild(card);
-          });
-
-          groupCard.appendChild(cardsContainer);
-          container.appendChild(groupCard);
-        });
+      var groups = {};
+      data.forEach(function (member) {
+        var groupKey = getPrimaryRoleId(member);
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push(member);
       });
+
+      var orderedRoles = rolesLibrary.slice();
+      var groupedKeys = Object.keys(groups);
+
+      groupedKeys.forEach(function (key) {
+        if (!orderedRoles.some(function (r) { return r.id === key || r.role_en === key; })) {
+          var sample = getPrimaryRole(groups[key][0]);
+          if (sample) orderedRoles.push(sample);
+        }
+      });
+
+      orderedRoles.sort(function (a, b) {
+        return (a.priority != null ? a.priority : 999) - (b.priority != null ? b.priority : 999);
+      });
+
+      orderedRoles.forEach(function (roleMeta) {
+        var roleKey = roleMeta.id || roleMeta.role_en;
+        if (!groups[roleKey] || !groups[roleKey].length) return;
+
+        var groupCard = document.createElement('div');
+        groupCard.className = 'staff-group-panel';
+
+        var roleHeader = document.createElement('h3');
+        roleHeader.className = 'staff-group-header';
+        roleHeader.textContent = formatRoleLabel(roleMeta, lang);
+        groupCard.appendChild(roleHeader);
+
+        var cardsContainer = document.createElement('div');
+        cardsContainer.className = 'staff-group-cards';
+
+        groups[roleKey].forEach(function (member) {
+          var primaryRole = getPrimaryRole(member);
+          var roleName = formatRoleBadgeText(primaryRole, lang);
+          var bioText = (member.role_en || '').split('|')[1] || '';
+          var hasBio = member.bio_en || member.bio_ge || bioText;
+
+          var card = document.createElement('div');
+          card.className = 'staff-compact-card';
+
+          if (hasBio) {
+            card.classList.add('has-bio');
+            card.title = lang === 'ge' ? 'დააწკაპუნეთ მეტი ინფორმაციისთვის' : 'Click to learn more';
+            card.onclick = function (e) {
+              e.stopPropagation();
+              showPopover(card, member, bioText);
+            };
+          }
+
+          var topDiv = document.createElement('div');
+          topDiv.className = 'staff-card-top';
+
+          var cardImg = document.createElement('img');
+          cardImg.src = member.photo_url || '';
+          cardImg.alt = member.name || '';
+          cardImg.className = 'staff-compact-photo';
+          topDiv.appendChild(cardImg);
+
+          var infoDiv = document.createElement('div');
+          infoDiv.className = 'staff-compact-info';
+
+          var nameDiv = document.createElement('div');
+          nameDiv.className = 'staff-compact-name';
+          nameDiv.textContent = member.name || '';
+          infoDiv.appendChild(nameDiv);
+
+          var roleDiv = document.createElement('div');
+          roleDiv.className = 'staff-compact-role';
+          roleDiv.textContent = roleName;
+          infoDiv.appendChild(roleDiv);
+
+          topDiv.appendChild(infoDiv);
+          card.appendChild(topDiv);
+          cardsContainer.appendChild(card);
+        });
+
+        groupCard.appendChild(cardsContainer);
+        container.appendChild(groupCard);
+      });
+    });
   }
 
-  // Initial render on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', renderStaff);
-  // Re-render on language change if function exists
   if (typeof window.registerLanguageChange === 'function') {
     window.registerLanguageChange(renderStaff);
   }
