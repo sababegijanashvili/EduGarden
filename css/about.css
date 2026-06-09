@@ -938,9 +938,9 @@ header {
     }
     
     .staff-popover-stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
       border-top: 1px solid rgba(0,0,0,0.06);
       margin-top: 10px;
       padding-top: 10px;
@@ -950,9 +950,13 @@ header {
     .staff-popover-stat-item {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
-      text-align: left;
-      min-width: 90px;
+      align-items: center;
+      text-align: center;
+      padding: 6px 4px;
+    }
+    
+    .staff-popover-stat-item:not(:last-child) {
+      border-right: 1px solid rgba(0,0,0,0.06);
     }
     
     .staff-popover-stat-label {
@@ -960,14 +964,21 @@ header {
       color: #666;
       text-transform: uppercase;
       font-weight: 600;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
     
     .staff-popover-stat-value {
       font-size: 13px;
       line-height: 1.4;
-      font-weight: 600;
+      font-weight: 700;
       color: #111;
+      text-align: center;
       word-break: break-word;
+      width: 100%;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      text-overflow: ellipsis;
     }
   

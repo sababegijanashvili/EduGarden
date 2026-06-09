@@ -170,6 +170,7 @@
       var statValue = document.createElement('span');
       statValue.className = 'staff-popover-stat-value';
       statValue.textContent = item.val;
+      statValue.title = item.val;
       statItem.appendChild(statLabel);
       statItem.appendChild(statValue);
       stats.appendChild(statItem);
