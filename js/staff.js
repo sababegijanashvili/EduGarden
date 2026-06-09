@@ -168,12 +168,13 @@
       statLabel.className = 'staff-popover-stat-label';
       statLabel.textContent = item.label;
       var statValue = document.createElement('span');
-      statValue.className = 'staff-popover-stat-value has-tooltip';
-      statValue.setAttribute('data-tooltip', item.val);
+      statValue.className = 'staff-popover-stat-value';
       var statValueText = document.createElement('span');
       statValueText.className = 'stat-value-text';
       statValueText.textContent = item.val;
       statValue.appendChild(statValueText);
+      statValue.addEventListener('mouseenter', function() { statValueText.classList.remove('stat-value-text'); });
+      statValue.addEventListener('mouseleave', function() { statValueText.classList.add('stat-value-text'); });
       statItem.appendChild(statLabel);
       statItem.appendChild(statValue);
       stats.appendChild(statItem);
