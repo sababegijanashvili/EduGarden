@@ -25,13 +25,18 @@ function initChatbot() {
   window.id = 'chatbot-window';
   window.className = 'chatbot-window';
 
+  var headerText = document.body.classList.contains('georgian') ? 'ფლორა 🌸' : 'Flora 🌸';
+  var welcomeText = document.body.classList.contains('georgian')
+    ? 'გამარჯობა! მე ვარ ფლორა. მკითხეთ ყველაფერი EduGarden-ის, ჩვენი ვარდების ან მდგრადი მებაღეობის შესახებ! 🌹'
+    : 'Hello! I\'m Flora. Ask me anything about EduGarden, our roses, or sustainable gardening! 🌹';
+
   window.innerHTML =
     '<div class="chatbot-header">' +
-      '<span>Flora 🌸</span>' +
+      '<span>' + headerText + '</span>' +
       '<button class="chatbot-close" onclick="toggleChat()" aria-label="Close chat">&times;</button>' +
     '</div>' +
     '<div class="chatbot-messages" id="chatbot-messages">' +
-      '<div class="chatbot-message bot">Hello! I\'m Flora. Ask me anything about EduGarden, our roses, or sustainable gardening! 🌹</div>' +
+      '<div class="chatbot-message bot">' + welcomeText + '</div>' +
     '</div>' +
     '<div class="chatbot-input-area">' +
       '<input class="chatbot-input" id="chatbot-input" type="text" placeholder="Type your message..." autocomplete="off">' +
@@ -48,6 +53,12 @@ function initChatbot() {
       handleChatSend();
     }
   });
+}
+
+function updateChatbotLanguage() {
+  var header = document.querySelector('.chatbot-header span');
+  if (!header) return;
+  header.textContent = document.body.classList.contains('georgian') ? 'ფლორა 🌸' : 'Flora 🌸';
 }
 
 function toggleChat() {
@@ -145,7 +156,8 @@ function hideTypingIndicator() {
 
 async function callGemini(userText) {
   var systemPrompt = 'You are Flora, a friendly, warm, and helpful chatbot representing EduGarden rose nursery in Gori, Georgia. ' +
-    'Respond in the SAME LANGUAGE the user wrote in (Georgian or English). Keep your answers short, helpful, and focused on EduGarden topics. ' +
+    'If the user writes in Georgian, respond in Georgian. If in English, respond in English. ' +
+    'Keep your answers short, helpful, and focused on EduGarden topics. ' +
     'If you don\'t know the answer, politely say you\'re not sure rather than making something up.';
 
   if (chatbotState.knowledge) {
@@ -166,7 +178,7 @@ async function callGemini(userText) {
 
   try {
     var res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=' + GEMINI_API_KEY,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,7 +208,12 @@ async function callGemini(userText) {
 
 // Initialize on DOM ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initChatbot);
+  document.addEventListener('DOMContentLoaded', function() { initChatbot(); });
 } else {
   initChatbot();
+}
+
+// Listen for language toggle
+if (window.registerLanguageChange) {
+  registerLanguageChange(updateChatbotLanguage);
 }
