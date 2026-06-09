@@ -698,8 +698,7 @@ header {
       .page-title { font-size: 1.2rem; }
       .page-header { margin-bottom: 12px; }
       .footer-contact, .footer-info, .footer-copyright { font-size: 0.85rem; }
-      .staff-popover-stats { grid-template-columns: 1fr; gap: 6px; }
-      .staff-popover-stat-item:not(:last-child) { border-right: none; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; }
+
     }
 
     /* ========== STAFF SECTION ========== */
@@ -938,11 +937,10 @@ header {
       width: 100%;
     }
     
-    /* 3-Column Stats Grid */
     .staff-popover-stats {
-      display: grid;
-      grid-template-columns: auto auto auto;
-      gap: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
       border-top: 1px solid rgba(0,0,0,0.06);
       margin-top: 10px;
       padding-top: 10px;
@@ -952,13 +950,9 @@ header {
     .staff-popover-stat-item {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding: 6px 4px;
-    }
-    
-    .staff-popover-stat-item:not(:last-child) {
-      border-right: 1px solid rgba(0,0,0,0.06);
+      align-items: flex-start;
+      text-align: left;
+      min-width: 90px;
     }
     
     .staff-popover-stat-label {
@@ -966,16 +960,14 @@ header {
       color: #666;
       text-transform: uppercase;
       font-weight: 600;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     
     .staff-popover-stat-value {
       font-size: 13px;
       line-height: 1.4;
-      font-weight: 700;
+      font-weight: 600;
       color: #111;
-      text-align: center;
       word-break: break-word;
-      width: 100%;
     }
   
