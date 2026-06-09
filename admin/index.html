@@ -1262,24 +1262,13 @@ function toggleReadSection() {
 }
 
 async function markMessageRead(id, makeRead) {
-  console.log('mr called with id:', id);
-  console.log('makeRead:', makeRead);
-  
   const { error } = await supabaseClient
     .from('contact_messages')
     .update({ is_read: makeRead })
     .eq('id', id);
   
-  console.log('Update error:', error);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
   
-  const { data: verify, error: verifyError } = await supabaseClient
-    .from('contact_messages')
-    .select('id, is_read')
-    .eq('id', id)
-    .single();
-  
-  console.log('Verify error:', verifyError);
-  console.log('DB state after update:', verify);
   for (var i = 0; i < messageCache.length; i++) {
     if (messageCache[i].id === id) { messageCache[i].is_read = makeRead; break; }
   }
