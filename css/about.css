@@ -975,10 +975,13 @@ header {
       text-align: center;
       word-break: break-word;
       width: 100%;
-      overflow: hidden;
+    }
+    
+    .stat-value-text {
       display: -webkit-box;
-      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
       text-overflow: ellipsis;
     }
     
