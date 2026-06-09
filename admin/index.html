@@ -390,7 +390,7 @@ function showLoading(container) { container.innerHTML = '<div class="spinner"></
 async function initApp() { await updateUnreadBadge(); renderSection('articles'); }
 async function updateUnreadBadge() {
   try {
-    var result = await supabaseClient.from('contact_messages').select('id', { count: 'exact', head: true }).eq('read', false);
+    var result = await supabaseClient.from('contact_messages').select('id', { count: 'exact', head: true }).eq('is_read', false);
     if (!result.error) { unreadCount = result.count || 0; var badge = document.getElementById('unreadBadge'); badge.textContent = unreadCount; badge.style.display = unreadCount > 0 ? 'inline' : 'none'; }
   } catch(e) {}
 }
@@ -1213,12 +1213,12 @@ function dtp(id, iu) {
 // ============================================================
 function renderMessageItem(m) {
   var d = new Date(m.created_at).toLocaleString();
-  var h = '<div class="message-item' + (m.read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
+  var h = '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
   h += '<div class="msg-header"><span class="msg-name">' + (m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
   h += '<div class="msg-preview">' + (m.email || '') + '</div>';
   h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
   h += '<div class="msg-actions">';
-  h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.read ? 'Mark Unread' : 'Mark Read') + '</button>';
+  h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
   h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
   h += '</div></div>';
   return h;
@@ -1228,8 +1228,8 @@ async function rm(c) {
   var r = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
   if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>'; return; }
-  var unread = r.data.filter(function(m) { return !m.read; });
-  var read = r.data.filter(function(m) { return m.read; });
+  var unread = r.data.filter(function(m) { return !m.is_read; });
+  var read = r.data.filter(function(m) { return m.is_read; });
   var h = '<div style="display:flex;flex-direction:column;gap:16px">';
   h += '<div class="card"><div class="card-header"><h4>Unread <span class="badge" style="background:var(--blue);color:white;padding:2px 8px;border-radius:10px;font-size:.75rem;margin-left:8px">' + unread.length + '</span></h4></div><div class="card-body" style="padding:0">';
   if (!unread.length) { h += '<p class="empty-state" style="margin:0;padding:20px">No unread messages</p>'; }
@@ -1262,7 +1262,7 @@ async function mr(id) {
   console.log('makeRead:', makeRead);
   const { error } = await supabaseClient
     .from('contact_messages')
-    .update({ read: makeRead })
+    .update({ is_read: makeRead })
     .eq('id', id);
   console.log('Update error:', error);
   if (error) { st('Error: ' + error.message, 'error'); return; }
