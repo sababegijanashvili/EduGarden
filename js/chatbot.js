@@ -96,8 +96,7 @@ async function loadChatbotKnowledge() {
   try {
     var { data, error } = await window.supabaseClient
       .from('chatbot_knowledge')
-      .select('content')
-      .order('created_at', { ascending: false });
+      .select('content');
 
     console.log('knowledge query error:', error);
     console.log('knowledge raw data:', data);
