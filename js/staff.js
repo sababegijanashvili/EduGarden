@@ -108,6 +108,10 @@
     img.src = member.photo_url || '';
     img.alt = member.name || '';
     img.className = 'staff-popover-avatar';
+    img.onclick = function(e) {
+      e.stopPropagation();
+      if (member.photo_url) openPhotoLightbox(member.photo_url);
+    };
     avatarWrap.appendChild(img);
     header.appendChild(avatarWrap);
 
@@ -350,10 +354,6 @@
           cardImg.src = member.photo_url || '';
           cardImg.alt = member.name || '';
           cardImg.className = 'staff-compact-photo';
-          cardImg.onclick = function(e) {
-            e.stopPropagation();
-            if (member.photo_url) openPhotoLightbox(member.photo_url);
-          };
           topDiv.appendChild(cardImg);
 
           var infoDiv = document.createElement('div');
