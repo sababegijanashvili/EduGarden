@@ -168,9 +168,9 @@
       statLabel.className = 'staff-popover-stat-label';
       statLabel.textContent = item.label;
       var statValue = document.createElement('span');
-      statValue.className = 'staff-popover-stat-value';
+      statValue.className = 'staff-popover-stat-value has-tooltip';
       statValue.textContent = item.val;
-      statValue.title = item.val;
+      statValue.setAttribute('data-tooltip', item.val);
       statItem.appendChild(statLabel);
       statItem.appendChild(statValue);
       stats.appendChild(statItem);
