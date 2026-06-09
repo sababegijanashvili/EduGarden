@@ -803,7 +803,7 @@ header {
       border-radius: 12px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.05);
       border: 1px solid rgba(0,0,0,0.08);
-      width: 350px;
+      width: 420px;
       max-width: calc(100vw - 20px);
       padding: 16px;
       box-sizing: border-box;
@@ -941,7 +941,7 @@ header {
     /* 3-Column Stats Grid */
     .staff-popover-stats {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: auto auto auto;
       gap: 0;
       border-top: 1px solid rgba(0,0,0,0.06);
       margin-top: 10px;
