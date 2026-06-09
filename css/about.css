@@ -698,6 +698,8 @@ header {
       .page-title { font-size: 1.2rem; }
       .page-header { margin-bottom: 12px; }
       .footer-contact, .footer-info, .footer-copyright { font-size: 0.85rem; }
+      .staff-popover-stats { grid-template-columns: 1fr; gap: 6px; }
+      .staff-popover-stat-item:not(:last-child) { border-right: none; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; }
     }
 
     /* ========== STAFF SECTION ========== */
@@ -969,16 +971,10 @@ header {
     
     .staff-popover-stat-value {
       font-size: 13px;
-      max-height: 2.8em;
       line-height: 1.4;
       font-weight: 700;
       color: #111;
       text-align: center;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      text-overflow: ellipsis;
       word-break: break-word;
       width: 100%;
     }
