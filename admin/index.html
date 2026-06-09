@@ -1211,33 +1211,55 @@ function dtp(id, iu) {
 // ============================================================
 // 5. MESSAGES
 // ============================================================
+function renderMessageItem(m) {
+  var d = new Date(m.created_at).toLocaleString();
+  var h = '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
+  h += '<div class="msg-header"><span class="msg-name">' + (m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
+  h += '<div class="msg-preview">' + (m.email || '') + '</div>';
+  h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
+  h += '<div class="msg-actions">';
+  h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
+  h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
+  h += '</div></div>';
+  return h;
+}
+
 async function rm(c) {
   var r = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
   if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>'; return; }
-  var h = '';
-  for (var i = 0; i < r.data.length; i++) {
-    var m = r.data[i];
-    var d = new Date(m.created_at).toLocaleString();
-    h += '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
-    h += '<div class="msg-header"><span class="msg-name">' + (m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
-    h += '<div class="msg-preview">' + (m.email || '') + '</div>';
-    h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
-    h += '<div class="msg-actions">';
-    h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
-    h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
-    h += '</div></div>';
-  }
+  var unread = r.data.filter(function(m) { return !m.is_read; });
+  var read = r.data.filter(function(m) { return m.is_read; });
+  var h = '<div style="display:flex;flex-direction:column;gap:16px">';
+  h += '<div class="card"><div class="card-header"><h4>Unread <span class="badge" style="background:var(--blue);color:white;padding:2px 8px;border-radius:10px;font-size:.75rem;margin-left:8px">' + unread.length + '</span></h4></div><div class="card-body" style="padding:0">';
+  if (!unread.length) { h += '<p class="empty-state" style="margin:0;padding:20px">No unread messages</p>'; }
+  else { unread.forEach(function(m) { h += renderMessageItem(m); }); }
+  h += '</div></div>';
+  h += '<div class="card"><div class="card-header" onclick="toggleReadSection()" style="cursor:pointer;user-select:none"><h4>Read <span style="font-size:.8rem;color:var(--gray-500);margin-left:4px">(' + read.length + ')</span><span id="readToggleIcon" style="margin-left:8px;font-size:.75rem">&#x25BC;</span></h4></div>';
+  h += '<div id="readMessagesSection" class="card-body" style="padding:0;display:none">';
+  if (!read.length) { h += '<p class="empty-state" style="margin:0;padding:20px">No read messages</p>'; }
+  else { read.forEach(function(m) { h += renderMessageItem(m); }); }
+  h += '</div></div></div>';
   c.innerHTML = h;
 }
 
 function toggleMsg(el) { el.classList.toggle('expanded'); }
 
+function toggleReadSection() {
+  var section = document.getElementById('readMessagesSection');
+  var icon = document.getElementById('readToggleIcon');
+  if (!section) return;
+  var isHidden = section.style.display === 'none';
+  section.style.display = isHidden ? 'block' : 'none';
+  if (icon) icon.innerHTML = isHidden ? '&#x25B2;' : '&#x25BC;';
+}
+
 async function mr(id) {
   var el = document.querySelector('.message-item[data-id="' + id + '"]');
-  var isRead = !el.classList.contains('unread');
-  await supabaseClient.from('contact_messages').update({ is_read: !isRead }).eq('id', id);
-  el.classList.toggle('unread');
+  if (!el) return;
+  var currentlyRead = !el.classList.contains('unread');
+  var result = await supabaseClient.from('contact_messages').update({ is_read: !currentlyRead }).eq('id', id);
+  if (result.error) { st('Error updating message', 'error'); return; }
   rs('messages');
 }
 
