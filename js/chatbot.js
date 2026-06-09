@@ -7,7 +7,8 @@ var chatbotState = {
   knowledge: null,
   knowledgeLoaded: false,
   open: false,
-  awaitingResponse: false
+  awaitingResponse: false,
+  chatHistory: []
 };
 
 function initChatbot() {
@@ -135,6 +136,8 @@ function addMessage(text, isUser) {
   msg.textContent = text;
   container.appendChild(msg);
   container.scrollTop = container.scrollHeight;
+
+  chatbotState.chatHistory.push({ role: isUser ? 'user' : 'model', text: text });
 }
 
 function showTypingIndicator() {
@@ -166,14 +169,16 @@ async function callGemini(userText) {
     systemPrompt += '\n\nNo specific knowledge base was loaded. Answer generally about roses and gardening based on what you know.';
   }
 
+  var recentMessages = chatbotState.chatHistory.slice(-6);
+  var contents = recentMessages.map(function(m) {
+    return { role: m.role, parts: [{ text: m.text }] };
+  });
+
   var body = {
     system_instruction: {
       parts: [{ text: systemPrompt }]
     },
-    contents: [{
-      role: 'user',
-      parts: [{ text: userText }]
-    }]
+    contents: contents
   };
 
   try {
