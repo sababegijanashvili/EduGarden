@@ -617,7 +617,7 @@ async function saveArticle() {
     if (currentAction === 'add') { r = await supabaseClient.from('articles').insert(d); }
     else { r = await supabaseClient.from('articles').update(d).eq('id', currentEditId); }
     if (r.error) { st('Error: ' + r.error.message, 'error'); }
-    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('articles'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('articles'); generateAutoKnowledge().catch(function(){}); }
   } catch(e) { st('Error: ' + e.message, 'error'); }
   setL(btn, false);
 }
@@ -634,6 +634,7 @@ function da(id, iu) {
     }
     st('Deleted!');
     rs('articles');
+    generateAutoKnowledge().catch(function(){});
   });
 }
 
@@ -711,7 +712,7 @@ async function sr() {
     if (currentAction === 'add') { result = await supabaseClient.from('roses').insert(d); }
     else { result = await supabaseClient.from('roses').update(d).eq('id', currentEditId); }
     if (result.error) { st('Error: ' + result.error.message, 'error'); }
-    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('roses'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('roses'); generateAutoKnowledge().catch(function(){}); }
   } catch(e) { st('Error: ' + e.message, 'error'); }
 }
 
@@ -722,6 +723,7 @@ async function dr(id, iu) {
     if (iu) await di(iu);
     st('Deleted!');
     rs('roses');
+    generateAutoKnowledge().catch(function(){});
   });
 }
 
@@ -812,7 +814,7 @@ async function sadr() {
     if (currentAction === 'add') { result = await supabaseClient.from('roses').insert(d); }
     else { result = await supabaseClient.from('roses').update(d).eq('id', currentEditId); }
     if (result.error) { st('Error: ' + result.error.message, 'error'); }
-    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('adr_roses'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('adr_roses'); generateAutoKnowledge().catch(function(){}); }
   } catch(e) { st('Error: ' + e.message, 'error'); }
 }
 
@@ -822,6 +824,7 @@ async function dadr(id, iu) {
     if (iu) await di(iu);
     st('Deleted!');
     rs('adr_roses');
+    generateAutoKnowledge().catch(function(){});
   });
 }
 
@@ -1143,7 +1146,7 @@ async function ss() {
     if (currentAction === 'add') { d.order_index = 0; result = await supabaseClient.from('staff').insert(d); }
     else { result = await supabaseClient.from('staff').update(d).eq('id', currentEditId); }
     if (result.error) { st('Error: ' + result.error.message, 'error'); }
-    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('staff'); }
+    else { st(currentAction === 'add' ? 'Created!' : 'Updated!'); cm(); rs('staff'); generateAutoKnowledge().catch(function(){}); }
   } catch(e) { st('Error: ' + e.message, 'error'); }
 }
 
@@ -1153,6 +1156,7 @@ function ds(id, iu) {
     if (iu) await di(iu);
     st('Deleted!');
     rs('staff');
+    generateAutoKnowledge().catch(function(){});
   });
 }
 
@@ -1288,32 +1292,185 @@ async function dmsg(id) {
 // ============================================================
 // 6. CHATBOT KNOWLEDGE
 // ============================================================
+
+// Auto-generate knowledge from site data
+async function generateAutoKnowledge() {
+  try {
+    var parts = [];
+
+    // 1. Site info
+    var { data: settings } = await supabaseClient.from('site_settings').select('*').limit(1);
+    if (settings && settings.length) {
+      var s = settings[0];
+      if (s.mission_en || s.mission_ge) {
+        parts.push('# About EduGarden');
+        if (s.mission_en) parts.push('Mission: ' + s.mission_en);
+        if (s.mission_ge) parts.push('Mission (GE): ' + s.mission_ge);
+      }
+      if (s.email || s.phone || s.address) {
+        parts.push('\n## Contact Information');
+        if (s.email) parts.push('- Email: ' + s.email);
+        if (s.phone) parts.push('- Phone: ' + s.phone);
+        if (s.address) parts.push('- Address: ' + s.address);
+      }
+    }
+
+    // 2. Roles (for staff resolution)
+    var { data: roles } = await supabaseClient.from('roles').select('*').order('priority');
+    var rolesMap = {};
+    if (roles && roles.length) {
+      roles.forEach(function(r) { rolesMap[r.id] = r; });
+    }
+
+    // 3. Roses
+    var { data: roses } = await supabaseClient.from('roses').select('*').order('name');
+    if (roses && roses.length) {
+      var standard = roses.filter(function(r) { return r.type_en !== 'ADR'; });
+      var adr = roses.filter(function(r) { return r.type_en === 'ADR'; });
+
+      if (standard.length) {
+        parts.push('\n## Rose Catalog (Standard Varieties)');
+        standard.forEach(function(r) {
+          var info = [];
+          info.push('### ' + r.name);
+          if (r.description_en) info.push(r.description_en);
+          if (r.description_ge) info.push(r.description_ge);
+          parts.push(info.join('\n'));
+        });
+      }
+
+      if (adr.length) {
+        parts.push('\n## ADR Roses (Disease-Resistant)');
+        adr.forEach(function(r) {
+          var info = [];
+          info.push('### ' + r.name);
+          if (r.description_en) info.push(r.description_en);
+          if (r.description_ge) info.push(r.description_ge);
+          if (r.height) info.push('- Height: ' + r.height + ' cm');
+          if (r.width) info.push('- Width: ' + r.width + ' cm');
+          if (r.breeder) info.push('- Breeder: ' + r.breeder);
+          if (r.year) info.push('- Year: ' + r.year);
+          parts.push(info.join('\n'));
+        });
+      }
+    }
+
+    // 4. Staff
+    var { data: staff } = await supabaseClient.from('staff').select('*').order('name');
+    if (staff && staff.length) {
+      parts.push('\n## Our Team');
+      staff.forEach(function(s) {
+        var roleLabels = [];
+        if (s.roles && s.roles.length && rolesMap) {
+          s.roles.forEach(function(rid) {
+            var r = rolesMap[rid];
+            if (r) roleLabels.push(r.role_en || r.role_ge);
+          });
+        }
+        var info = [];
+        info.push('### ' + s.name);
+        if (roleLabels.length) info.push('Roles: ' + roleLabels.join(', '));
+        if (s.bio_en) info.push(s.bio_en);
+        if (s.bio_ge) info.push(s.bio_ge);
+        if (s.specialization_en || s.specialization_ge) info.push('Specialization: ' + (s.specialization_en || s.specialization_ge));
+        if (s.location) info.push('Location: ' + s.location);
+        if (s.years_at != null) info.push('Years at EduGarden: ' + s.years_at);
+        parts.push(info.join('\n'));
+      });
+    }
+
+    // 5. Articles (latest 10)
+    var { data: articles } = await supabaseClient.from('articles').select('title_en, title_ge, content_en, content_ge').order('created_at', { ascending: false }).limit(10);
+    if (articles && articles.length) {
+      parts.push('\n## Latest Articles');
+      articles.forEach(function(a) {
+        var info = [];
+        info.push('### ' + (a.title_en || a.title_ge));
+        if (a.content_en) {
+          var excerpt = a.content_en.replace(/<[^>]*>/g, '').substring(0, 300);
+          info.push(excerpt + (a.content_en.replace(/<[^>]*>/g, '').length > 300 ? '...' : ''));
+        } else if (a.content_ge) {
+          var excerpt = a.content_ge.replace(/<[^>]*>/g, '').substring(0, 300);
+          info.push(excerpt + (a.content_ge.replace(/<[^>]*>/g, '').length > 300 ? '...' : ''));
+        }
+        parts.push(info.join('\n'));
+      });
+    }
+
+    var knowledgeText = parts.join('\n\n');
+
+    // Upsert auto knowledge row
+    var { data: existing } = await supabaseClient.from('chatbot_knowledge').select('id').eq('type', 'auto').limit(1);
+    if (existing && existing.length) {
+      await supabaseClient.from('chatbot_knowledge').update({ content: knowledgeText }).eq('id', existing[0].id);
+    } else {
+      await supabaseClient.from('chatbot_knowledge').insert({ content: knowledgeText, type: 'auto' });
+    }
+
+    return knowledgeText;
+  } catch(e) {
+    console.log('Auto-knowledge generation error:', e);
+    return null;
+  }
+}
+
 async function rcb(c) {
   var r = await supabaseClient.from('chatbot_knowledge').select('*').order('updated_at', { ascending: false });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
-  if (!r.data || !r.data.length) {
-    c.innerHTML = '<div class="card"><div class="card-header"><h4>Chatbot Knowledge Base (Markdown)</h4></div><div class="card-body"><textarea class="form-control knowledge-textarea" id="kbText"></textarea><div class="form-actions" style="margin-top:12px"><button class="btn btn-primary" id="kbSaveBtn">Create</button></div></div></div>';
-    document.getElementById('kbSaveBtn').onclick = async function() {
-      var btn = this; setL(btn, true);
-      try {
-        var r = await supabaseClient.from('chatbot_knowledge').insert({ content: document.getElementById('kbText').value });
-        if (r.error) { st('Error: ' + r.error.message, 'error'); } else { st('Created!'); rs('chatbot'); }
-      } catch(e) { st('Error: ' + e.message, 'error'); }
-      setL(btn, false);
-    };
-    return;
+  var manualKB = null, autoKB = null;
+  if (r.data && r.data.length) {
+    r.data.forEach(function(x) {
+      if (x.type === 'auto') autoKB = x;
+      else manualKB = x;
+    });
   }
-  var kb = r.data[0];
-  var h = '<div class="card"><div class="card-header"><h4>Chatbot Knowledge Base (Markdown)</h4></div><div class="card-body">';
-  h += '<textarea class="form-control knowledge-textarea" id="kbText">' + (kb.content || '').replace(/</g, '<').replace(/>/g, '>') + '</textarea>';
-  h += '<div class="form-actions" style="margin-top:12px"><button class="btn btn-primary" id="kbSaveBtn">Save</button></div>';
-  h += '<p class="last-updated">Last updated: ' + new Date(kb.updated_at).toLocaleString() + '</p></div></div>';
+  // Manual Knowledge panel
+  var esc = function(v) { return (v || '').replace(/</g, '<').replace(/>/g, '>'); };
+  var h = '<div class="card"><div class="card-header"><h4>Manual Knowledge (Markdown)</h4></div><div class="card-body">';
+  h += '<p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:8px;">Write custom knowledge here — this is sent to Flora alongside auto-generated content.</p>';
+  h += '<textarea class="form-control knowledge-textarea" id="kbText">' + esc(manualKB ? manualKB.content : '') + '</textarea>';
+  h += '<div class="form-actions" style="margin-top:12px">';
+  h += '<button class="btn btn-primary" id="kbSaveBtn">' + (manualKB ? 'Save' : 'Create') + '</button></div>';
+  if (manualKB && manualKB.updated_at) {
+    h += '<p class="last-updated">Last updated: ' + new Date(manualKB.updated_at).toLocaleString() + '</p>';
+  }
+  h += '</div></div>';
+
+  // Auto-generated Knowledge panel
+  h += '<div class="card" style="margin-top:16px;"><div class="card-header"><h4>Auto-Generated Knowledge</h4></div><div class="card-body">';
+  h += '<p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:8px;">Generated automatically from site data (roses, articles, staff, settings). Regenerate after making changes to keep Flora up to date.</p>';
+  h += '<textarea class="form-control knowledge-textarea" id="autoKbText" readonly style="background:var(--gray-100);color:var(--gray-700);">' + esc(autoKB ? autoKB.content : '') + '</textarea>';
+  h += '<div class="form-actions" style="margin-top:12px">';
+  h += '<button class="btn btn-primary" id="regenerateKbBtn">' + (autoKB ? 'Regenerate Now' : 'Generate Now') + '</button></div>';
+  if (autoKB && autoKB.updated_at) {
+    h += '<p class="last-updated">Last generated: ' + new Date(autoKB.updated_at).toLocaleString() + '</p>';
+  }
+  h += '</div></div>';
   c.innerHTML = h;
+
+  // Manual save handler
   document.getElementById('kbSaveBtn').onclick = async function() {
     var btn = this; setL(btn, true);
     try {
-      var r = await supabaseClient.from('chatbot_knowledge').update({ content: document.getElementById('kbText').value }).eq('id', kb.id);
-      if (r.error) { st('Error: ' + r.error.message, 'error'); } else { st('Saved!'); rs('chatbot'); }
+      var content = document.getElementById('kbText').value;
+      if (manualKB) {
+        var res = await supabaseClient.from('chatbot_knowledge').update({ content: content }).eq('id', manualKB.id);
+        if (res.error) { st('Error: ' + res.error.message, 'error'); } else { st('Saved!'); rs('chatbot'); }
+      } else {
+        var res = await supabaseClient.from('chatbot_knowledge').insert({ content: content, type: 'manual' });
+        if (res.error) { st('Error: ' + res.error.message, 'error'); } else { st('Created!'); rs('chatbot'); }
+      }
+    } catch(e) { st('Error: ' + e.message, 'error'); }
+    setL(btn, false);
+  };
+
+  // Auto regenerate handler
+  document.getElementById('regenerateKbBtn').onclick = async function() {
+    var btn = this; setL(btn, true);
+    try {
+      var result = await generateAutoKnowledge();
+      if (result !== null) { st('Auto knowledge regenerated!'); rs('chatbot'); }
+      else { st('Failed to regenerate auto knowledge', 'error'); }
     } catch(e) { st('Error: ' + e.message, 'error'); }
     setL(btn, false);
   };
@@ -1360,7 +1517,7 @@ async function rset(c) {
       } else {
         res = await supabaseClient.from('site_settings').insert(data);
       }
-      if (res.error) { st('Error: ' + res.error.message, 'error'); } else { st('Settings saved!'); rs('settings'); }
+      if (res.error) { st('Error: ' + res.error.message, 'error'); } else { st('Settings saved!'); rs('settings'); generateAutoKnowledge().catch(function(){}); }
     } catch(e) { st('Error: ' + e.message, 'error'); }
     setL(btn, false);
   };
