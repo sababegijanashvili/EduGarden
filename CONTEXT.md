@@ -1,6 +1,6 @@
 # EduGarden Project Context
 
-> **For AI Agent Onboarding** — Read this first to understand the entire project. You can still inspect individual files for full context.
+> **For AI Agent Onboarding** — Read this first to understand the entire project. The **code in the repository is the source of truth** if anything here conflicts with a file on disk.
 
 ---
 
@@ -8,16 +8,17 @@
 
 EduGarden is a **vanilla static website** for a social enterprise based in **Gori, Georgia** that specializes in **ADR roses** (a disease-resistant, certified rose variety). The site serves as a:
 
-- Public marketing/brochure website for visitors ([index.html](file:///c:/Users/sabab/EduGarden/index.html))
-- Protected admin dashboard for content management ([admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html))
+- Public marketing/brochure website for visitors ([index.html](index.html))
+- Protected admin dashboard for content management ([admin/index.html](admin/index.html))
 
 ### Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vanilla HTML5, CSS3, ES6+ JavaScript (no frontend frameworks) |
+| Frontend | Vanilla HTML5, CSS3, ES6+ JavaScript (no frontend frameworks, no build step) |
 | Backend | Supabase (PostgreSQL database + Storage bucket `images`) |
-| Hosting | Vercel (static site, auto-deploys from GitHub) |
+| Auth (admin) | Supabase Auth (email + password via `signInWithPassword`) |
+| Hosting | Vercel (`https://edugarden.vercel.app`) and/or GitHub Pages (workflow in `.github/workflows/static.yml`) |
 | Repository | `https://github.com/notnormaluser/EduGarden` |
 
 ### Key URLs
@@ -32,42 +33,75 @@ EduGarden is a **vanilla static website** for a social enterprise based in **Gor
 
 ```
 /
-├── index.html                  → Main public website (navbar, hero, about, slider, catalog, articles, contact, footer)
+├── index.html                  → Main public website (navbar, hero, about, staff, slider, catalog, articles, contact, footer)
 ├── admin/
-│   └── index.html              → Protected admin dashboard (single-file dashboard application; all CSS & JS inline)
-├── admin.js                    → Standalone admin script (deprecated; not used in production)
+│   └── index.html              → Protected admin dashboard (single-file app; all CSS & JS inline)
+├── admin.js                    → DEPRECATED standalone admin script — not used in production
 ├── CONTEXT.md                  → This file — project context for AI agents
+├── CNAME                       → Custom domain configuration for deployment
 ├── favicon.svg                 → Website favicon
-├── schema.json                 → Local copy of database schema documentation
+│
+├── sql/
+│   └── setup_roles.sql         → SQL migration: creates `roles` table + `staff.roles` jsonb column
 │
 ├── css/
-│   ├── base.css                → Color variables, resets, typography, and site-wide utility classes
-│   ├── navbar.css              → Navigation bar layout and responsive mobile drawer rules
-│   ├── hero.css                → Hero banner styling with text shadow overlays
-│   ├── about.css               → About section, staff cards, group panels, and XenForo-style hover popovers
-│   ├── slider.css              → Image slider layout and navigation dots styling
-│   ├── catalog.css             → Rose catalog grid layout, card styles, and letter filter buttons
-│   ├── articles.css            → Blog/articles cards layout, details modal, and image gallery lightbox
-│   └── contact.css             → Contact form fields, input borders, maps wrapper, and footer styling
+│   ├── base.css                → Color variables, resets, typography, site-wide utilities
+│   ├── navbar.css              → Navigation bar and mobile drawer
+│   ├── hero.css                → Hero banner
+│   ├── about.css               → About section, staff cards, group panels, XenForo-style popovers
+│   ├── slider.css              → Team photos slider
+│   ├── catalog.css             → Rose catalog grid and A–Z filter buttons
+│   ├── articles.css            → Blog cards, article modal, image gallery lightbox
+│   └── contact.css             → Contact form and footer styling
 │
-└── js/
-    ├── supabase.js             → Shared script; initializes Supabase Client and defines global toast & translation helpers
-    ├── language.js             → Language translation coordinator (English vs Georgian) and URL-based translation updates
-    ├── catalog.js              → Dynamic rose catalog parser with alphabetical filter indexing and ADR card specs
-    ├── slider.js               → Dynamic team photos slideshow fetching from Supabase Storage & Database
-    ├── articles.js             → Dynamic blog articles listing, expanded modal renderer, and content galleries
-    ├── contact.js              → Dynamic contact form submission handler connecting directly to Supabase DB
-    ├── staff.js                → Dynamic staff roster grid, role grouping logic, and XenForo-style profile popovers
-    └── full_admin.py           → Deprecated Python script originally designed to compile admin assets
+├── js/
+│   ├── supabase.js             → Supabase client init, `window.showToast`, `registerLanguageChange`
+│   ├── language.js             → EN/GE translation coordinator
+│   ├── catalog.js              → Rose catalog (standard + ADR) with alphabetical filter
+│   ├── slider.js               → Homepage team photo slideshow
+│   ├── articles.js             → Articles listing, modal, content galleries
+│   ├── contact.js              → Contact form → `contact_messages` table
+│   ├── staff.js                → Staff roster, role grouping, profile popovers
+│   └── full_admin.py           → DEPRECATED Python compile script — not used
+│
+└── .github/
+    └── workflows/
+        └── static.yml            → GitHub Pages deploy workflow (push to `main`)
 ```
+
+### What Is NOT Used
+
+| Path | Status |
+|---|---|
+| `admin.js` (repo root) | Deprecated — admin lives in `admin/index.html` only |
+| `admin.html` | Does not exist — use `admin/index.html` |
+| `schema.json` | Removed / never committed — schema is documented here and in `sql/setup_roles.sql` |
+| `js/full_admin.py` | Deprecated |
 
 ### CSS Organization
 
-CSS is split modularly by page section under the `css/` directory. All public stylesheets are linked inside the `<head>` of [index.html](file:///c:/Users/sabab/EduGarden/index.html). The admin dashboard ([admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html)) houses all its CSS rules inline inside a `<style>` block to keep operations fully self-contained and avoid global layout collisions.
+CSS is split by page section under `css/`. All public stylesheets are linked in the `<head>` of [index.html](index.html).
+
+Staff popover styles (`.staff-popover`, `.staff-group-panel`, stats grid, etc.) live in [css/about.css](css/about.css).
+
+The admin dashboard ([admin/index.html](admin/index.html)) keeps **all CSS inline** in a `<style>` block. Do not extract admin CSS to separate files — this is intentional to avoid global collisions.
 
 ### JS Organization
 
-Public page scripting is modularized under the `js/` directory. Files are loaded at the bottom of the public `<body>` in order of dependency. [supabase.js](file:///c:/Users/sabab/EduGarden/js/supabase.js) must be loaded first (after the Supabase CDN dependency) to expose `window.supabaseClient` and global notification utilities to downstream files. The admin page ([admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html)) contains its Javascript inline inside a `<script>` tag.
+Public scripts load at the bottom of [index.html](index.html) in this order:
+
+1. Supabase CDN (`@supabase/supabase-js@2`)
+2. `js/supabase.js` — **must be first** (exposes `window.supabaseClient`, `window.showToast`)
+3. `js/language.js`
+4. `js/catalog.js`
+5. `js/slider.js`
+6. `js/articles.js`
+7. `js/contact.js`
+8. `js/staff.js`
+
+`index.html` also includes `<div id="toast-container"></div>` before `</body>` for contact form toasts.
+
+The admin page contains **all JavaScript inline** in a single `<script>` tag inside [admin/index.html](admin/index.html).
 
 ---
 
@@ -81,9 +115,13 @@ Anon Key:     sb_publishable_UExfTnoTaFgieljt6oiZ8Q_m0f2raxy
 Storage:      images bucket (publicly readable)
 ```
 
-**Security Notice:** Tables currently have RLS disabled for prototyping purposes. Write and delete operations are performed directly via the client using the anon key. RLS hardening is a planned roadmap item.
+**Security notice:** Tables currently have RLS disabled for prototyping. Reads and writes use the anon key from the client. RLS hardening is a planned item.
 
-### Client Initialization (used in supabase.js and admin/index.html)
+**First-time setup:** Run [sql/setup_roles.sql](sql/setup_roles.sql) in the Supabase SQL Editor before using the Roles admin section or multi-role staff features.
+
+### Client Initialization
+
+Used in [js/supabase.js](js/supabase.js) and [admin/index.html](admin/index.html):
 
 ```javascript
 const { createClient } = supabase;
@@ -93,294 +131,437 @@ window.supabaseClient = createClient(
 );
 ```
 
-### Database Tables Schema
+Admin uses a local `supabaseClient` variable (same URL/key) and additionally uses `supabaseClient.auth` for login.
+
+### Database Tables
 
 #### 1. `articles`
-Stores blog posts/articles. `image_url` stores a comma-separated list of image URLs. The first image acts as the card banner, while any subsequent URLs are rendered as a scrollable gallery in the expanded view modal.
+
+Blog posts. `image_url` is comma-separated: first URL = card banner; remaining URLs = gallery in the expanded modal.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
-| `title_en` | text | Required, English title |
-| `title_ge` | text | Required, Georgian title |
-| `content_en` | text | Required, English content |
-| `content_ge` | text | Required, Georgian content |
-| `image_url` | text | Optional, comma-separated image URLs (Banner, Content Image 1, Content Image 2...) |
+| `id` | uuid | PK, auto-generated |
+| `title_en` | text | Required |
+| `title_ge` | text | Required |
+| `content_en` | text | Required |
+| `content_ge` | text | Required |
+| `image_url` | text | Optional, comma-separated URLs |
 | `created_at` | timestamptz | Auto-set |
 | `updated_at` | timestamptz | Auto-set |
 
 #### 2. `roses`
-Stores catalog records for standard and ADR (certified disease-resistant) roses. ADR entries store additional specification attributes such as height, width, breeder, and year. The name field is a single shared column for both English and Georgian translation layouts.
+
+Standard and ADR roses in one table. Distinguished by `type_en` / `type_ge` (`Standard` vs `ADR`).
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
-| `name` | text | Required, shared name value |
-| `description_en` | text | Optional, English description |
-| `description_ge` | text | Optional, Georgian description |
-| `image_url` | text | Optional, main image path |
-| `type_en` | text | Optional, type descriptor (e.g. `Standard` or `ADR`) |
-| `type_ge` | text | Optional, type descriptor (e.g. `Standard` or `ADR`) |
-| `height` | text | Optional, ADR height range in cm (e.g., `70-90`) |
-| `width` | text | Optional, ADR width range in cm (e.g., `85-105`) |
-| `breeder` | text | Optional, breeder designation (e.g., `Kordes`) |
-| `year` | text | Optional, breeding year (e.g., `2021`) |
+| `id` | uuid | PK |
+| `name` | text | Required, single shared name column |
+| `description_en` | text | Optional |
+| `description_ge` | text | Optional |
+| `image_url` | text | Optional |
+| `type_en` | text | `Standard` or `ADR` |
+| `type_ge` | text | `Standard` or `ADR` |
+| `height` | text | ADR only, e.g. `70-90` |
+| `width` | text | ADR only, e.g. `85-105` |
+| `breeder` | text | ADR only |
+| `year` | text | ADR only |
 | `created_at` | timestamptz | Auto-set |
 | `updated_at` | timestamptz | Auto-set |
 
-#### 3. `staff`
-Roster database. Grouped into headers dynamically on the main page by mapping matching `role_en`/`role_ge` values. It utilizes color attributes to style custom role badges. Drag-and-drop order updates rewrite `order_index` values in PostgreSQL.
+#### 3. `roles` *(role library — new)*
+
+Central role definitions. Created by [sql/setup_roles.sql](sql/setup_roles.sql). Admin manages these in the **Roles** sidebar section. Staff members reference roles by UUID in `staff.roles`.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
-| `name` | text | Required, staff member's name (shared column) |
-| `role_en` | text | Optional, English role title |
-| `role_ge` | text | Optional, Georgian role title |
-| `bio_en` | text | Optional, detailed English biography |
-| `bio_ge` | text | Optional, detailed Georgian biography |
-| `photo_url` | text | Required, profile photo path |
-| `order_index` | int4 | Layout sorting index within groupings |
-| `role_priority` | int4 | Sort weight to order role panels (e.g., Founders show first) |
-| `badge_color` | text | Hex code background (e.g., `#4CAF50`) |
-| `badge_text_color` | text | Hex code text color (e.g., `#ffffff`) |
-| `years_at` | int4 | Optional, number of years active at EduGarden |
-| `specialization_en` | text | Optional, specialization in English (e.g., `Organic Cultivation`) |
-| `specialization_ge` | text | Optional, specialization in Georgian |
-| `location` | text | Optional, location details (e.g., `Gori, Georgia`) |
+| `id` | uuid | PK, `gen_random_uuid()` |
+| `role_en` | text | Required, English role name |
+| `role_ge` | text | Optional, Georgian role name |
+| `badge_color` | text | Default `#8d6e63` |
+| `badge_text_color` | text | Default `#ffffff` |
+| `priority` | integer | Default `10`; **lower number = shown first** in groups and badge order |
 | `created_at` | timestamptz | Auto-set |
 
-#### 4. `team_photos`
-Home page slider gallery photos.
+RLS is disabled on this table per the setup script.
+
+#### 4. `staff`
+
+Team roster. Supports **multiple roles per person** via `roles` jsonb (array of role UUIDs from the `roles` table). Legacy single-role columns are kept for backward compatibility.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
-| `photo_url` | text | Required, image location |
+| `id` | uuid | PK |
+| `name` | text | Required, single shared name |
+| `role_en` | text | Legacy/fallback — synced from primary assigned role on save |
+| `role_ge` | text | Legacy/fallback — synced from primary assigned role on save |
+| `roles` | jsonb | **Array of role UUID strings**, e.g. `["uuid-1","uuid-2"]` |
+| `bio_en` | text | Optional, English biography (popover) |
+| `bio_ge` | text | Optional, Georgian biography (popover) |
+| `photo_url` | text | Required, profile photo in Storage |
+| `order_index` | int4 | Sort order within a role group on the public site |
+| `role_priority` | int4 | Legacy — synced from primary role's `priority` on save |
+| `badge_color` | text | Legacy — synced from primary role on save |
+| `badge_text_color` | text | Legacy — synced from primary role on save |
+| `years_at` | int4 | Optional, years at EduGarden (popover stat) |
+| `specialization_en` | text | Optional (popover stat — **not** role text) |
+| `specialization_ge` | text | Optional (popover stat) |
+| `location` | text | Optional, e.g. `Gori, Georgia` (popover stat) |
 | `created_at` | timestamptz | Auto-set |
 
-#### 5. `contact_messages`
-Form feedback submissions.
+**Role assignment model:**
+- Admin assigns one or more roles via clickable chips in the staff form.
+- `staff.roles` stores an array of `roles.id` UUIDs.
+- On save, the **primary role** (lowest `priority` among selected roles) is copied into legacy columns (`role_en`, `role_ge`, `badge_color`, `badge_text_color`, `role_priority`).
+- Public site groups each member under their **primary role** (lowest priority number among assigned roles).
+- If `staff.roles` is empty, [js/staff.js](js/staff.js) falls back to legacy `role_en` / `role_ge` / badge columns.
+
+**Legacy bio fallback:** If `bio_en` / `bio_ge` are empty, [js/staff.js](js/staff.js) may split `role_en` / `role_ge` at `|` (`Role | Biography`) for old data.
+
+#### 5. `team_photos`
+
+Homepage slider images. Column is `photo_url` (not `image_url`).
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
+| `id` | uuid | PK |
+| `photo_url` | text | Required |
+| `created_at` | timestamptz | Auto-set |
+
+#### 6. `contact_messages`
+
+Contact form submissions.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK |
 | `name` | text | Sender name |
-| `email` | text | Sender email address |
+| `email` | text | Sender email |
 | `message` | text | Message body |
-| `is_read` | boolean | Toggle flag; default is false |
+| `is_read` | boolean | Default `false`; toggled in admin Messages section |
 | `created_at` | timestamptz | Auto-set |
 
-#### 6. `chatbot_knowledge`
-Markdown articles utilized for chatbot reasoning injection.
+#### 7. `chatbot_knowledge`
+
+Markdown content for a future AI chatbot (RAG context). Not yet exposed on the public site.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
-| `content` | text | Markdown structured knowledge base data |
+| `id` | uuid | PK |
+| `content` | text | Markdown |
 | `created_at` | timestamptz | Auto-set |
 | `updated_at` | timestamptz | Auto-set |
 
-#### 7. `site_settings`
-Global site parameters. Overrides static fallback emails, phone lines, addresses, and translation mission text variables inside the public website files on startup.
+#### 8. `site_settings`
+
+Global contact info and mission text; loaded on public site startup.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | Primary Key, auto-generated |
+| `id` | uuid | PK |
 | `email` | text | Public contact email |
-| `phone` | text | Public phone number |
-| `address` | text | Public office physical address |
+| `phone` | text | Public phone |
+| `address` | text | Physical address |
 | `mission_en` | text | Mission statement (English) |
 | `mission_ge` | text | Mission statement (Georgian) |
-| `updated_at` | timestamptz | Auto-set timestamp |
+| `updated_at` | timestamptz | Auto-set |
 
 ---
 
-## 4. ADMIN PANEL ([admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html))
+## 4. ADMIN PANEL ([admin/index.html](admin/index.html))
 
-### Authentication Architecture
+### Authentication
 
-The admin panel uses native **Supabase Auth** with email and password credentials. There are no hardcoded bypass checks. 
+The admin panel uses **Supabase Auth** — there is **no hardcoded password** or client-side bypass.
 
-- **Session Persistence**: On page load, `checkSession()` calls `supabaseClient.auth.getSession()` to read active cookies or tokens. If a session is valid, the login card is hidden and the admin dashboard initializes.
-- **Login Card**: Displayed when there is no active session. Unsuccessful logins display an inline "Invalid email or password" error.
-- **Logout**: Handled via `supabaseClient.auth.signOut()`, which tears down user session variables and returns the browser to the login screen.
-- **Security Precaution**: The HTML markup of the dashboard is **not present** on initial page load. It is dynamically injected into the `#dashboardRoot` div only after successful session verification. This keeps sensitive admin operations and structural information hidden from unauthorized visitors.
+- **Login:** `supabaseClient.auth.signInWithPassword({ email, password })` via the login card (`#loginScreen`).
+- **Session check:** On load, `checkSession()` calls `supabaseClient.auth.getSession()`. Valid session → `injectDashboard()` + `initApp()`.
+- **Logout:** `supabaseClient.auth.signOut()` tears down the session and shows the login screen again.
+- **Auth state listener:** `onAuthStateChange` hides the dashboard on `SIGNED_OUT`.
+- **Security:** Dashboard HTML is **not in the initial DOM**. It is injected into `#dashboardRoot` only after authentication via `injectDashboard()`.
 
-### Sidebar Navigation & Sections
+Admin users must be created in the Supabase Dashboard (Authentication → Users).
 
-The dashboard displays 8 distinct management sections:
-1. **Articles**: Add, edit, and delete news articles. Supports multiple image selection (banner image + thumbnail uploads).
-2. **Rose Catalog**: Add, edit, and delete standard rose items in the catalog.
-3. **ADR Roses**: Manage ADR certified roses. Form features inputs for height (cm), width (cm), breeder, and year.
-4. **Staff**: Roster management. Includes drag-and-drop elements to change order. Features custom badge colors (using background and text `<input type="color">` pickers) and a category selector (remembers new roles locally in `localStorage` to display as future dropdown suggestions).
-5. **Team Photos**: Upload slide photos to the home page carousel.
-6. **Messages**: Inbox containing message cards with quick actions to delete or toggle the read/unread state (updates the sidebar badge counter).
-7. **Chatbot Knowledge**: Central markdown text editor linking to `chatbot_knowledge`.
-8. **Site Settings**: Central form to update phone numbers, emails, addresses, and mission statements.
+### Sidebar Sections (9 total)
+
+| # | Section key | Label | Add button |
+|---|---|---|---|
+| 1 | `articles` | Articles | + Add New |
+| 2 | `roses` | Rose Catalog | + Add New |
+| 3 | `adr_roses` | ADR Roses | + Add New |
+| 4 | `roles` | Roles | + Add New |
+| 5 | `staff` | Staff | + Add New |
+| 6 | `team_photos` | Team Photos | + Upload Photo |
+| 7 | `messages` | Messages | (none) |
+| 8 | `chatbot` | Chatbot Knowledge | (none) |
+| 9 | `settings` | Site Settings | (none) |
+
+#### Section summaries
+
+1. **Articles** — CRUD; banner + multiple content images; `image_url` comma-joined.
+2. **Rose Catalog** — CRUD for `type_en !== 'ADR'`.
+3. **ADR Roses** — CRUD for `type_en === 'ADR'`; height, width, breeder, year fields.
+4. **Roles** — CRUD for the `roles` table. Form fields: name EN, name GE, badge color, text color, priority. List shows colored badge preview + Edit/Delete. Delete uses confirmation dialog.
+5. **Staff** — CRUD; staff grouped by primary role from `roles` table. Group headers use **`Georgian (English)`** format, e.g. `დამფუძნებელი (Founder)`. Staff with no assigned role appear under **Unassigned**. Staff form fields:
+   - Name (required)
+   - **Roles** — clickable chips loaded from `roles` table (multi-select, checkmark when selected)
+   - Bio EN / Bio GE
+   - Specialization EN / Specialization GE
+   - Location
+   - Years at EduGarden
+   - Photo (required on create)
+   - Saves `staff.roles` as UUID array; syncs legacy columns from primary role.
+6. **Team Photos** — Upload/delete slider images.
+7. **Messages** — Contact inbox; expand to read; mark read/unread; delete; unread badge on sidebar.
+8. **Chatbot Knowledge** — Markdown textarea editor.
+9. **Site Settings** — Email, phone, address, mission EN/GE.
+
+### Global State Variables (admin script)
+
+| Variable | Purpose |
+|---|---|
+| `currentSection` | Active sidebar section key |
+| `currentAction` | `'add'` or `'edit'` for modal forms |
+| `currentEditId` | UUID of record being edited |
+| `allStaffMembers` | Cached staff array for staff section |
+| `allRolesLibrary` | Cached roles from `roles` table |
+| `staffSelectedRoleIds` | Role UUIDs selected in staff form chips |
+| `dashboardInjected` | Whether `#dashboardRoot` has been populated |
 
 ### Function Name Mappings
 
-The admin panel scripts use minified and abbreviated function names to keep the inline file compact. Below is the mapping of these abbreviations to their full names and purposes:
+The admin script uses abbreviated names for compact inline `onclick` handlers. **New global functions** used in onclick strings must remain at top level (not only inside closures).
 
-| Abbreviation | Full Name | Purpose |
-|---|---|---|
-| `st(m, t)` | `showToast(m, type)` | Triggers alert toast banner notifications |
-| `cm()` | `closeModal()` | Closes modal overlay and resets active selections |
-| `om(title)` | `openModal(title)` | Opens modal dialog overlay with target title header |
-| `rs(section)` | `renderSection(section)` | Dispatches database queries and re-draws section screens |
-| `ui(file)` | `uploadImage(file)` | Uploads binary image to Supabase Storage bucket |
-| `di(url)` | `deleteImage(url)` | Deletes asset URL path from Supabase storage |
-| `sc(t, m, c)` | `showConfirm(title, msg, callback)` | Displays confirmation modal before destructive actions |
-| `cfu(u, f)` | `createFileUpload(url, callback)` | Renders dashed upload container/image preview block |
-| `setL(btn, loading)`| `setLoading(btn, loading)` | Toggles spinner class and disables target submit buttons |
-| `rr(container)` | `renderRoses(container)` | Renders standard rose cards grid |
-| `radr(container)` | `renderAdrRoses(container)` | Renders ADR certified rose cards grid |
-| `rsf(container)` | `renderStaff(container)` | Renders staff list panels grouped by role |
-| `rtp(container)` | `renderTeamPhotos(container)` | Renders team photo grid |
-| `rm(container)` | `renderMessages(container)` | Renders list of incoming contact messages |
-| `rcb(container)` | `renderChatbot(container)` | Renders chatbot knowledge text editor section |
-| `rset(container)` | `renderSettings(container)` | Renders settings text form inputs |
-| `srf(id)` | `showRoseForm(id)` | Renders standard rose editor form modal |
-| `sadrf(id)` | `showAdrRoseForm(id)` | Renders ADR rose editor form modal with height/width fields |
-| `ssf(id)` | `showStaffForm(id)` | Renders staff card editor form with color pickers and dropdown roles |
-| `stpf()` | `showTeamPhotoForm()` | Renders team slide upload form modal |
-| `sr()` | `saveRose()` | Inserts or updates standard rose records |
-| `sadr()` | `saveAdrRose()` | Inserts or updates ADR rose records |
-| `ss()` | `saveStaff()` | Inserts or updates staff records |
-| `dr(id, iu)` | `deleteRose(id, url)` | Deletes standard rose record and its storage image |
-| `dadr(id, iu)` | `deleteAdrRose(id, url)` | Deletes ADR rose record and its storage image |
-| `ds(id, iu)` | `deleteStaff(id, url)` | Deletes staff member record and their profile photo |
-| `dtp(id, iu)` | `deleteTeamPhoto(id, url)` | Deletes team slide photo record and its storage file |
-| `da(id, iu)` | `deleteArticle(id, url)` | Deletes article record and all its comma-separated images |
-| `dmsg(id)` | `deleteMessage(id)` | Deletes contact feedback message |
-| `mr(id)` | `markRead(id)` | Toggles contact message read state (updates sidebar counts) |
+| Abbreviation / Name | Purpose |
+|---|---|
+| `st(m, t)` | `showToast(message, type)` |
+| `cm()` | `closeModal()` |
+| `om(title)` | `openModal(title)` |
+| `rs(section)` | `renderSection(section)` — dispatches to section renderers |
+| `ui(file)` | `uploadImage(file)` → Supabase Storage `images` bucket |
+| `di(url)` | `deleteImage(url)` from Storage |
+| `sc(t, m, c)` | `showConfirm(title, msg, callback)` |
+| `cfu(u, f)` | `createFileUpload(url, onFileSelect)` |
+| `setL(btn, loading)` | `setLoading(btn, loading)` |
+| `showArticleForm(id)` | Article add/edit modal |
+| `da(id, iu)` | `deleteArticle(id, imageUrls)` |
+| `rr(c)` | `renderRoses` — standard rose grid |
+| `radr(c)` | `renderAdrRoses` — ADR rose grid |
+| `srf(id)` | `showRoseForm(id)` |
+| `sadrf(id)` | `showAdrRoseForm(id)` |
+| `sr()` | `saveRose()` |
+| `sadr()` | `saveAdrRose()` |
+| `dr(id, iu)` | `deleteRose` |
+| `dadr(id, iu)` | `deleteAdrRose` |
+| `rroles(c)` | `renderRoles` — roles library list |
+| `showRoleForm(id)` | Role add/edit modal |
+| `saveRole()` | Insert/update `roles` table |
+| `deleteRole(id)` | Delete role with confirmation |
+| `loadRolesLibrary()` | Fetch all roles ordered by `priority` |
+| `rsf(c)` | `renderStaff` — staff grouped by primary role |
+| `ssf(id)` | `showStaffForm(id)` — staff editor with role chips |
+| `ss()` | `saveStaff()` |
+| `toggleStaffRoleChip(roleId)` | Toggle role selection in staff form |
+| `renderStaffRoleChips()` | Re-render role chip buttons |
+| `ds(id, iu)` | `deleteStaff` |
+| `rtp(c)` | `renderTeamPhotos` |
+| `stpf()` | `showTeamPhotoForm()` |
+| `dtp(id, iu)` | `deleteTeamPhoto` |
+| `rm(c)` | `renderMessages` |
+| `toggleMsg(el)` | Expand/collapse message |
+| `mr(id)` | `markRead` — toggle `is_read` |
+| `dmsg(id)` | `deleteMessage` |
+| `rcb(c)` | `renderChatbot` |
+| `rset(c)` | `renderSettings` |
+| `formatRoleLabelAdmin(role)` | Returns `Georgian (English)` label string |
+| `escHtmlAttr(val)` | Escape HTML attribute text |
 
----
+### Input ID Fallback Pattern
 
-## 5. WHAT WORKS NOW
+Article forms use descriptive IDs (`article_title_en`) with legacy shorthand fallbacks (`ate`). When reading form values:
 
-All dynamic features on both the public website and the admin panel have been integrated with Supabase and are fully functional.
-
-### Public Website ([index.html](file:///c:/Users/sabab/EduGarden/index.html))
-
-1. **Articles**: Dynamically loaded from `articles` table in descending order. Cards feature descriptions, dates, and author metadata. Clicking a card opens a modal overlay with the full content. Multiple images in the `image_url` column are rendered as a content gallery below the text. Images feature click-to-zoom overlays (lightbox).
-2. **Rose Catalog**: Catalog entries under 'Standard' are dynamically loaded and filtered under an alphabetical index (A-Z).
-3. **ADR Roses Section**: Automatically displays certified roses (`type_en === 'ADR'`) along with their specific details (Height, Width, Breeder, and Year).
-4. **Staff Roster**: Staff members are dynamically grouped by role and sorted based on `role_priority` and `order_index`. Card details are displayed in a clean grid. If a bio is present, clicking the card opens a XenForo-style popover aligned above the card. The popover contains:
-   - Name first.
-   - Dynamic badges (role badge with custom database colors + a static neutral team member badge).
-   - Bio details (derived from the translation column or fallback role splitter).
-   - A 3-column stats grid at the bottom (Years at EduGarden, Specialization, and Location).
-5. **Team Photos Slider**: Slideshow component on the main homepage dynamically loads, caches, and cycles through images from the `team_photos` table.
-6. **Contact Form**: Submitting the contact form creates a new record in the `contact_messages` table and shows a success toast.
-7. **Site Settings & Translations**: Site metadata (email, phone, address, and mission statements) is fetched dynamically on startup and applied across the page translations (English/Georgian).
-
-### Admin Panel ([admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html))
-
-1. **Supabase Auth**: Secure email/password login and session validation. Login screen content is bypassed if an active session is found, and dashboard HTML is dynamically injected on success.
-2. **Standard and ADR Rose Catalog CRUD**: Standalone standard and ADR sections manage database insert/update operations and display records correctly.
-3. **Staff Roster Manager & Drag Reordering**: Dragging and dropping staff cards triggers `setupDragDrop()`, re-ordering them instantly and updating their `order_index` in PostgreSQL via `saveStaffOrder()`. The modal form allows full edits, color picker updates, and custom roles.
-4. **Team Photos Carousel Uploader**: Allows uploading new images and deleting existing slides.
-5. **Inbox Messages manager**: Lists user queries, handles toggling read status (synchronizing sidebar badge counts), and message deletion.
-6. **Chatbot Knowledge Editor**: Markdown text area editor allows quick updates to chatbot knowledge files.
-7. **Global site parameters settings form**: Form edits contact details and mission translations.
-
----
-
-## 6. WHAT STILL NEEDS BUILDING
-
-While the core functionality is complete, the following improvements can be implemented in future phases:
-
-### 1. AI Chatbot Widget (Public Site Integration)
-Add a floating chat bubble widget on the public website that enables users to query information about EduGarden, organic gardening, and ADR roses. The widget should send queries to a serverless backend service or an AI model API that references the content stored in the `chatbot_knowledge` table as context (RAG).
-
-### 2. Form Validation & Edge Cases
-Enhance admin panel forms with stricter validation checks (e.g. email format verification, image size restrictions, character limits for biographies).
-
-### 3. Row-Level Security (RLS) Policies
-Implement PostgreSQL RLS policies in the Supabase Dashboard to secure tables:
-- **`contact_messages`**: Public write-only (allow anonymous inserts), authenticated admin read/delete.
-- **`articles`**, **`roses`**, **`staff`**, **`team_photos`**, **`site_settings`**, **`chatbot_knowledge`**: Public read-only, authenticated write/delete restricted to admin users.
-
----
-
-## 7. DEPLOYMENT
-
-### Hosting
-
-- **Platform:** Vercel
-- **Live URL:** `https://edugarden.vercel.app`
-- **Deployment Trigger:** Auto-deploys from the `main` branch on GitHub.
-
-### Deployment Notes
-
-- **Static site deployment**: Vercel serves the files directly. No build step is required.
-- **Custom domain**: A `CNAME` file is present in the repository root for custom domain configuration.
-- **Environment variables**: Not required for deployment. Database credentials use the public/anonymous key, which is safe to expose.
-
----
-
-## 8. KEY PATTERNS & CONVENTIONS
-
-### Language Switching & State Coordination
-The public page uses [language.js](file:///c:/Users/sabab/EduGarden/js/language.js) to manage English and Georgian translations. On language toggle:
-- `lang-ge` or `lang-en` active styles are updated.
-- All DOM nodes matching `[data-translate]` are translated.
-- Language change callbacks registered via `registerLanguageChange()` are triggered, allowing dynamic sections (staff list, articles list, rose catalog) to fetch data and refresh content in the selected language.
-
-### Image Handling
-Images are uploaded to Supabase Storage in the `images` bucket using unique filenames:
-`timestamp_random.ext`
-The public URL format is:
-`https://exoyfpqfgixofsuginxx.supabase.co/storage/v1/object/public/images/{filename}`
-When articles or other items with attached images are deleted, their corresponding storage assets are also deleted via the `deleteImage(url)` helper to prevent storage accumulation.
-
-### Dialog Modals and Alert Toast Notifications
-The public website and admin panel share modular modal overlays (`#modalOverlay` or `#articleModal`) that close when users click outside the container.
-- Confirmation modals prevent accidental deletion of database items.
-- A custom toast container handles notifications. Toast messages auto-dismiss after 3 seconds.
-
----
-
-## 9. TROUBLESHOOTING COMMON ISSUES
-
-### Minified Function Mismatches
-When editing [admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html), ensure that calls from dynamically rendered HTML strings target globally-scoped, minified function aliases (e.g., `da()` instead of `deleteArticle()`). Refer to the Function Name Mappings table above.
-
-### Input IDs vs Shorthand fallbacks
-Inputs inside forms use standard descriptive IDs (e.g., `article_title_en`). Some legacy scripts reference minified abbreviations (`ate`). Always use safe fallback assignments to prevent null pointer exceptions:
 ```javascript
 var te = (document.getElementById('ate') || document.getElementById('article_title_en')).value.trim();
 ```
 
 ---
 
-## 10. CRITICAL INFORMATION FOR INCOMING AI AGENTS
+## 5. PUBLIC SITE BEHAVIOR
 
-If you are an AI system onboarding to this codebase, pay close attention to these architectural constraints and execution patterns to avoid breaking functionality:
+### Staff ([js/staff.js](js/staff.js) + [css/about.css](css/about.css))
 
-### 1. Architectural Style & Code Structure
-- **Strictly Vanilla CSS and Vanilla JS**: Do not introduce build pipelines (Vite, Webpack, Parcel, Babel), compiler tools, or frameworks (React, Vue, Tailwind, etc.) unless explicitly instructed by the user. 
-- **Admin Panel Self-Containment**: The admin dashboard is located in [admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html) and contains all its CSS styling and Javascript code inline. Do not extract these styles or scripts into separate files. Maintaining a single file is a design requirement to keep the deployment framework-free and avoid global CSS collisions.
-- **Post-Auth Injected Dashboard**: In [admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html), the dashboard markup is injected into `#dashboardRoot` *after* a successful login session check in `injectDashboard()`. You will not find the dashboard HTML directly in the body tags on page load.
+On load, fetches **`roles`** and **`staff`** in parallel.
 
-### 2. Database Columns & Typing
-- **Roses vs Catalog**: Standard and ADR roses are both stored in the `roses` table, distinguished by the `type_en`/`type_ge` values (`Standard` vs `ADR`). There is no table named `rose_catalog` or `adr_roses`.
-- **Unified Name Column**: The `roses` and `staff` tables use a single `name` column for both English and Georgian translation states. Georgian names generally do not differ from English spellings in this context, so do not try to split names or use separators (such as `Name EN | Name GE` or pipe strings).
-- **Staff Biography Storage**: While the `staff` table has separate `bio_en` and `bio_ge` columns, [js/staff.js](file:///c:/Users/sabab/EduGarden/js/staff.js) supports a fallback mechanism where it splits the `role_en`/`role_ge` strings at the pipe `|` character (i.e., `Role | Biography`) if the biography columns are empty. This is for legacy data compatibility.
-- **Photos Column Naming**: The `staff` and `team_photos` tables store their file links in a column named `photo_url`, NOT `image_url`. The `roses` and `articles` tables store their links in `image_url`. Ensure you use the correct column name for the target table.
+**Grouping:** Staff appear under the group for their **primary role** (assigned role with lowest `priority`). Groups are ordered by `roles.priority`.
 
-### 3. Minified Abbreviated Names & Aliases
-- In [admin/index.html](file:///c:/Users/sabab/EduGarden/admin/index.html), shorthand abbreviations are used for inputs (e.g. `ate`, `atg`) and global action methods (e.g. `dr()`, `ssf()`, `da()`). If you introduce new action methods in the script, **you must expose global aliases** at the bottom of the `<script>` tag so inline event strings (like `onclick="..."`) can resolve them successfully.
-- Keep the `(document.getElementById('shortId') || document.getElementById('longId')).value` fallback pattern when retrieving input element values in forms to protect against null reference crashes.
+**Group headers:** `Georgian (English)` when both names exist; otherwise English or Georgian alone.
 
-### 4. Staff Ordering and Drag-and-Drop
-- The ordering of staff cards on the public page is sorted by `role_priority` first, then `order_index`. 
-- Drag-and-drop actions in the admin panel trigger `setupDragDrop()` which reads the relative positions of the DOM nodes and pushes separate `update` requests to Supabase in a loop (`saveStaffOrder()`). There is no custom Postgres function or RPC.
+**Compact cards:** Photo, name, primary role label. Clickable when bio exists.
 
-### 5. Media Disposal
-- When deleting records from `articles`, `roses`, `staff`, or `team_photos` tables, always parse and delete their corresponding files from the Supabase Storage `images` bucket using the `deleteImage(url)` helper to prevent dead files from accumulating in cloud storage. Articles may have multiple images stored as a comma-separated list; make sure to iterate over and delete all of them.
+**Popover layout** (top to bottom):
+
+```
+┌─────────────────────────────────┐
+│ [PHOTO]  Name (large, bold)     │
+│          Role badge(s)          │
+│          "Team Member" badge    │
+├─────────────────────────────────┤
+│ Bio text (left-aligned)         │
+├─────────────────────────────────┤
+│ Years | Specialization | Location│
+└─────────────────────────────────┘
+```
+
+- Role badges: from `staff.roles` → resolved against `roles` table (colors from DB). Sorted by `priority`. Legacy fallback if `roles` column empty.
+- Team Member badge: `Team Member` / `გუნდის წევრი` (fixed neutral color in CSS).
+- Bio: `bio_en` / `bio_ge` (or legacy pipe-split from `role_en`).
+- Stats: `years_at`, `specialization_en/ge`, `location` — **not** from role columns.
+- Re-renders on language change via `registerLanguageChange(renderStaff)`.
+
+### Contact ([js/contact.js](js/contact.js))
+
+Submits to `contact_messages`. On success calls `window.showToast('Message sent!', 'success')` and resets the form.
+
+### Toast ([js/supabase.js](js/supabase.js))
+
+`window.showToast(message, type)` — `type` is `'success'`, `'error'`, or `'info'`. Container: `#toast-container` (bottom-right on public site; admin uses `#toastContainer` top-right inline).
+
+### Language ([js/language.js](js/language.js))
+
+Toggles `body.georgian` class; translates `[data-translate]` nodes; fires `registerLanguageChange` callbacks.
+
+---
+
+## 6. WHAT WORKS NOW
+
+### Public Website ([index.html](index.html))
+
+| Feature | Status |
+|---|---|
+| Articles (list, modal, multi-image gallery, lightbox) | Working |
+| Rose catalog (standard, A–Z filter) | Working |
+| ADR roses section (`type_en === 'ADR'`) | Working |
+| Staff roster (roles table, multi-role badges, popover) | Working |
+| Team photos slider | Working |
+| Contact form → Supabase + success toast | Working |
+| Site settings (email, phone, address, mission) | Working |
+| EN / GE language switching | Working |
+
+### Admin Panel ([admin/index.html](admin/index.html))
+
+| Feature | Status |
+|---|---|
+| Supabase Auth (email/password, session persistence) | Working |
+| Articles CRUD + multi-image upload | Working |
+| Standard + ADR rose CRUD | Working |
+| **Roles library CRUD** (`roles` table) | Working |
+| **Staff CRUD with multi-role chip assignment** | Working |
+| Staff list grouped by primary role, bilingual headers | Working |
+| Team photos upload/delete | Working |
+| Messages inbox (read/unread toggle, delete, badge) | Working |
+| Chatbot knowledge editor | Working (content only; no public widget) |
+| Site settings form | Working |
+
+---
+
+## 7. WHAT STILL NEEDS BUILDING
+
+### 1. AI Chatbot Widget (Public Site)
+Floating chat UI on the public site that queries an AI backend using `chatbot_knowledge` as RAG context. The admin editor exists; the public widget does not.
+
+### 2. Row-Level Security (RLS)
+Implement Supabase RLS policies:
+- `contact_messages`: anonymous insert; authenticated read/delete for admins.
+- `articles`, `roses`, `staff`, `roles`, `team_photos`, `site_settings`, `chatbot_knowledge`: public read; authenticated write/delete for admins.
+
+### 3. Form Validation & Edge Cases
+Stricter admin validation (email format, image size limits, bio length). Contact toast may be hard to see (bottom-right z-index) — consider repositioning in `supabase.js`.
+
+### 4. Messages UX Improvements (optional)
+Split inbox into New / Read lists, instant DOM updates without full section re-render, Supabase Realtime for new messages.
+
+### 5. Staff `order_index` Management
+No admin UI currently reorders staff cards within a group (`order_index`). Public site sorts by `order_index` within groups.
+
+### 6. Database Setup Verification
+Ensure [sql/setup_roles.sql](sql/setup_roles.sql) has been run in Supabase so `roles` table and `staff.roles` column exist. Create at least one role (e.g. Founder / დამფუძნებელი, priority `1`) before assigning staff.
+
+---
+
+## 8. DEPLOYMENT
+
+### Vercel (primary live URL)
+
+- **URL:** `https://edugarden.vercel.app`
+- **Trigger:** Auto-deploy from `main` on GitHub
+- **Build:** None — static files served as-is
+- **Env vars:** Not required (anon key is public in client code)
+
+### GitHub Pages
+
+- Workflow: [.github/workflows/static.yml](.github/workflows/static.yml)
+- Deploys entire repo root on push to `main`
+
+### Custom Domain
+
+[CNAME](CNAME) file present in repo root.
+
+---
+
+## 9. KEY PATTERNS & CONVENTIONS
+
+### Architectural Rules for AI Agents
+
+1. **Vanilla only** — No React, Vue, Vite, Webpack, Tailwind, etc., unless explicitly requested.
+2. **Admin is one file** — Do not split [admin/index.html](admin/index.html) CSS/JS into separate files.
+3. **Post-auth injection** — Dashboard markup is built by `injectDashboard()`, not present in static HTML.
+4. **Photo column naming** — `staff` and `team_photos` use `photo_url`; `roses` and `articles` use `image_url`.
+5. **Unified name column** — `staff.name` and `roses.name` are single columns (not split EN/GE).
+6. **Roses table** — No separate `rose_catalog` or `adr_roses` tables; filter by `type_en`.
+7. **Roles are centralized** — Define roles in `roles` table; assign to staff via `staff.roles` UUID array. Do not invent per-staff inline role definitions without updating the library.
+8. **Global onclick handlers** — Functions called from HTML strings in admin must be globally scoped. Minified aliases (`st`, `cm`, `rs`, etc.) are at the bottom of the admin script.
+9. **Media cleanup** — On delete, call `deleteImage(url)` for Storage files. Articles may have multiple comma-separated URLs.
+
+### Image Handling
+
+Upload path: `images` bucket, filename `timestamp_random.ext`
+
+Public URL:
+```
+https://exoyfpqfgixofsuginxx.supabase.co/storage/v1/object/public/images/{filename}
+```
+
+### Modals & Toasts
+
+- Admin: `#modalOverlay`, `#confirmOverlay`, `#toastContainer`
+- Public articles: `#articleModal` or `#modalOverlay` (see articles.js)
+- Toasts auto-dismiss after ~3 seconds
+
+---
+
+## 10. TROUBLESHOOTING
+
+| Problem | Likely cause |
+|---|---|
+| Roles section empty / errors | `roles` table not created — run [sql/setup_roles.sql](sql/setup_roles.sql) |
+| Staff form shows "No roles defined" | Create roles in admin **Roles** section first |
+| Staff not grouped correctly | Check `staff.roles` UUIDs match `roles.id`; primary role = lowest `priority` |
+| Popover shows wrong specialization | Must come from `specialization_en/ge`, not `role_ge` |
+| Admin onclick handler not found | Function not global — add alias at bottom of admin `<script>` |
+| `rsf is not a function` confusion | In admin, `rsf` = render staff section. In public site, staff logic is in [js/staff.js](js/staff.js) `renderStaff()` |
+| Contact toast invisible | Toast container bottom-right may be behind footer; check `#toast-container` in DOM |
+
+---
+
+## 11. QUICK START FOR A NEW AI AGENT
+
+1. Read this file.
+2. Skim [index.html](index.html) script load order and [admin/index.html](admin/index.html) sidebar + `injectDashboard()`.
+3. Confirm Supabase has run [sql/setup_roles.sql](sql/setup_roles.sql).
+4. For staff/roles work: read [js/staff.js](js/staff.js) and admin sections `rroles`, `rsf`, `ssf`, `ss`.
+5. Make **surgical** changes; match existing vanilla JS style and minified admin patterns.
+6. Do **not** extract admin into separate files or add a build pipeline without explicit user request.
 
 ---
 

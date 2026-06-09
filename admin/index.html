@@ -117,12 +117,14 @@
     .staff-dragging{opacity:.5}.staff-drag-over{border-top:3px solid var(--green)}
     .role-order-panel{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:24px;border:1px solid var(--gray-200)}
     .role-order-panel h3{font-size:1rem;font-weight:700;color:var(--gray-800);margin-bottom:12px}
-    .role-order-list{display:flex;flex-direction:column;gap:8px;max-width:420px}
-    .role-order-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);cursor:grab;user-select:none;transition:background var(--transition),border-color var(--transition)}
-    .role-order-item:active{cursor:grabbing}
-    .role-order-item:hover{background:var(--gray-100)}
-    .role-drag-handle{font-size:1.25rem;color:var(--gray-500);line-height:1;flex-shrink:0;cursor:grab}
-    .role-order-label{font-weight:600;color:var(--gray-800);flex:1}
+.role-order-list{display:flex;flex-direction:column;gap:8px}
+.role-order-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);cursor:grab;user-select:none;transition:background var(--transition),border-color var(--transition)}
+.role-order-item:active{cursor:grabbing}
+.role-order-item:hover{background:var(--gray-100)}
+.role-order-item.dragging{opacity:0.4;background:var(--gray-200)}
+.role-order-item.drag-over{border-top:3px solid var(--green)}
+.role-drag-handle{font-size:1.25rem;color:var(--gray-500);line-height:1;flex-shrink:0;cursor:grab}
+.role-order-label{font-weight:600;color:var(--gray-800);flex:1}
     .role-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
     .role-chip{border:2px solid transparent;border-radius:20px;padding:8px 14px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px}
     .role-chip:hover{opacity:.9;transform:translateY(-1px)}
@@ -160,6 +162,7 @@ let allStaffMembers = [];
 let allRolesLibrary = [];
 let staffSelectedRoleIds = [];
 let dashboardInjected = false;
+let roleDragSrcId = null;
 var sectionNames = { articles:'Articles', roses:'Rose Catalog', adr_roses:'ADR Roses', roles:'Roles', staff:'Staff', team_photos:'Team Photos', messages:'Messages', chatbot:'Chatbot Knowledge', settings:'Site Settings' };
 
 document.getElementById('loginBtn').addEventListener('click', handleLogin);
@@ -850,19 +853,19 @@ async function rroles(c) {
     c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F3F7;&#xFE0F;</div><p>No roles yet. Click + Add New to create one.</p></div>';
     return;
   }
-  var h = '<div class="grid-list">';
+  var h = '<div class="role-order-panel"><h3>Drag roles to reorder (top = highest priority)</h3><div class="role-order-list" id="roleOrderList">';
   allRolesLibrary.forEach(function(role) {
-    h += '<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">';
-    h += '<div style="display:flex;align-items:center;gap:12px;flex:1">';
-    h += '<span style="display:inline-block;padding:6px 12px;border-radius:6px;font-weight:600;font-size:.85rem;background:' + (role.badge_color || '#8d6e63') + ';color:' + (role.badge_text_color || '#fff') + '">' + escHtmlAttr(formatRoleLabelAdmin(role)) + '</span>';
-    h += '<span style="font-size:.8rem;color:var(--gray-600)">Priority: ' + (role.priority != null ? role.priority : 10) + '</span>';
-    h += '</div>';
-    h += '<div style="display:flex;gap:8px">';
+    h += '<div class="role-order-item" draggable="true" data-role-id="' + role.id + '"';
+    h += ' ondragstart="handleRoleDragStart(event)" ondragover="handleRoleDragOver(event)" ondrop="handleRoleDrop(event)" ondragend="handleRoleDragEnd(event)" ondragleave="handleRoleDragLeave(event)">';
+    h += '<span class="role-drag-handle">&#x2630;</span>';
+    h += '<span style="display:inline-block;padding:4px 10px;border-radius:6px;font-weight:600;font-size:.85rem;background:' + (role.badge_color || '#8d6e63') + ';color:' + (role.badge_text_color || '#fff') + '">' + escHtmlAttr(formatRoleLabelAdmin(role)) + '</span>';
+    h += '<span class="role-order-label">' + escHtmlAttr(formatRoleLabelAdmin(role)) + '</span>';
+    h += '<div style="margin-left:auto;display:flex;gap:8px">';
     h += '<button class="btn btn-sm btn-primary" onclick="showRoleForm(\'' + role.id + '\')">Edit</button>';
     h += '<button class="btn btn-sm btn-danger" onclick="deleteRole(\'' + role.id + '\')">Delete</button>';
-    h += '</div></div></div>';
+    h += '</div></div>';
   });
-  h += '</div>';
+  h += '</div></div>';
   c.innerHTML = h;
 }
 
@@ -874,7 +877,6 @@ function showRoleForm(id) {
   h += '<div class="form-group"><label>Name (GE)</label><input class="form-control" id="role_ge"></div></div>';
   h += '<div class="form-row"><div class="form-group"><label>Badge Color</label><input type="color" class="form-control" id="role_badge_color" value="#8d6e63" style="height:38px;padding:2px"></div>';
   h += '<div class="form-group"><label>Text Color</label><input type="color" class="form-control" id="role_badge_text_color" value="#ffffff" style="height:38px;padding:2px"></div></div>';
-  h += '<div class="form-group"><label>Priority (lower = shown first)</label><input class="form-control" type="number" id="role_priority" min="1" value="10"></div>';
   h += '<div class="form-actions"><button type="button" class="btn btn-secondary" onclick="cm()">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div></form>';
   om(id ? 'Edit Role' : 'Add Role');
   document.getElementById('modalBody').innerHTML = h;
@@ -886,7 +888,6 @@ function showRoleForm(id) {
       document.getElementById('role_ge').value = r.data.role_ge || '';
       document.getElementById('role_badge_color').value = r.data.badge_color || '#8d6e63';
       document.getElementById('role_badge_text_color').value = r.data.badge_text_color || '#ffffff';
-      document.getElementById('role_priority').value = r.data.priority != null ? r.data.priority : 10;
     })();
   }
   document.getElementById('roleForm').onsubmit = function(e) { e.preventDefault(); saveRole(); };
@@ -899,9 +900,9 @@ async function saveRole() {
     role_en: roleEn,
     role_ge: document.getElementById('role_ge').value.trim() || null,
     badge_color: document.getElementById('role_badge_color').value,
-    badge_text_color: document.getElementById('role_badge_text_color').value,
-    priority: parseInt(document.getElementById('role_priority').value, 10) || 10
+    badge_text_color: document.getElementById('role_badge_text_color').value
   };
+  if (currentAction === 'add') data.priority = (allRolesLibrary.length || 0) + 1;
   var result;
   if (currentAction === 'add') result = await supabaseClient.from('roles').insert(data);
   else result = await supabaseClient.from('roles').update(data).eq('id', currentEditId);
@@ -1311,6 +1312,68 @@ async function rset(c) {
     } catch(e) { st('Error: ' + e.message, 'error'); }
     setL(btn, false);
   };
+}
+
+// ============================================================
+// Roles drag-and-drop reordering
+// ============================================================
+function handleRoleDragStart(ev) {
+  var item = ev.target.closest('.role-order-item');
+  if (!item) return;
+  roleDragSrcId = item.getAttribute('data-role-id');
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', roleDragSrcId);
+  item.classList.add('dragging');
+}
+
+function handleRoleDragOver(ev) {
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  var item = ev.target.closest('.role-order-item');
+  if (item && item.getAttribute('data-role-id') !== roleDragSrcId) {
+    item.classList.add('drag-over');
+  }
+}
+
+function handleRoleDragLeave(ev) {
+  var item = ev.target.closest('.role-order-item');
+  if (item) item.classList.remove('drag-over');
+}
+
+function handleRoleDrop(ev) {
+  ev.preventDefault();
+  var targetItem = ev.target.closest('.role-order-item');
+  if (!targetItem) return;
+  targetItem.classList.remove('drag-over');
+  var targetId = targetItem.getAttribute('data-role-id');
+  if (!roleDragSrcId || roleDragSrcId === targetId) return;
+  var srcIdx = -1, tgtIdx = -1;
+  for (var i = 0; i < allRolesLibrary.length; i++) {
+    if (allRolesLibrary[i].id === roleDragSrcId) srcIdx = i;
+    if (allRolesLibrary[i].id === targetId) tgtIdx = i;
+  }
+  if (srcIdx === -1 || tgtIdx === -1) return;
+  var item = allRolesLibrary.splice(srcIdx, 1)[0];
+  allRolesLibrary.splice(tgtIdx, 0, item);
+  saveRolePriorities();
+}
+
+function handleRoleDragEnd(ev) {
+  var item = ev.target.closest('.role-order-item');
+  if (item) item.classList.remove('dragging');
+  var overs = document.querySelectorAll('.role-order-item.drag-over');
+  for (var i = 0; i < overs.length; i++) { overs[i].classList.remove('drag-over'); }
+  roleDragSrcId = null;
+}
+
+async function saveRolePriorities() {
+  for (var i = 0; i < allRolesLibrary.length; i++) {
+    var r = await supabaseClient.from('roles').update({ priority: i + 1 }).eq('id', allRolesLibrary[i].id);
+    if (r.error) { st('Error saving priorities: ' + r.error.message, 'error'); return; }
+  }
+  for (var i = 0; i < allRolesLibrary.length; i++) { allRolesLibrary[i].priority = i + 1; }
+  st('Priorities saved!');
+  rs('roles');
 }
 
 // Aliases for minified function names used by appended code sections

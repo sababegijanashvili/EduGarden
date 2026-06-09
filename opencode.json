@@ -1,0 +1,35 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "@tarquinen/opencode-dcp",
+    "@simonwjackson/opencode-direnv",
+    "oh-my-openagent",
+    "opencode-handoff",
+    "opencode-pty",
+    "opencode-websearch-cited"
+  ],
+  "model": "deepseek/deepseek-v4-flash",
+  "instructions": [
+    "AGENTS.md",
+    "CONTEXT.md"
+  ],
+  "lsp": true,
+  "mcp": {
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer {env:GITHUB_TOKEN}"
+      }
+    },
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com/mcp?project_ref=exoyfpqfgixofsuginxx"
+    }
+  },
+  "permission": {
+    "bash": "ask",
+    "edit": "allow",
+    "read": "allow"
+  }
+}
