@@ -1414,6 +1414,15 @@ async function generateAutoKnowledge() {
   }
 }
 
+function toggleAutoKnowledge() {
+  var panel = document.getElementById('autoKnowledgePanel');
+  var icon = document.getElementById('autoKnowledgeToggleIcon');
+  if (!panel) return;
+  var hidden = panel.style.display === 'none';
+  panel.style.display = hidden ? 'block' : 'none';
+  if (icon) icon.innerHTML = hidden ? '&#x25BC;' : '&#x25B6;';
+}
+
 async function rcb(c) {
   var r = await supabaseClient.from('chatbot_knowledge').select('*').order('updated_at', { ascending: false });
   if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
@@ -1436,17 +1445,29 @@ async function rcb(c) {
   }
   h += '</div></div>';
 
-  // Auto-generated Knowledge panel
-  h += '<div class="card" style="margin-top:16px;"><div class="card-header"><h4>Auto-Generated Knowledge</h4></div><div class="card-body">';
-  h += '<p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:8px;">Generated automatically from site data (roses, articles, staff, settings). Regenerate after making changes to keep Flora up to date.</p>';
+  // Auto-generated Knowledge toggle (collapsed by default)
+  h += '<div id="autoKnowledgeToggle" onclick="toggleAutoKnowledge()" style="margin-top:16px;cursor:pointer;color:var(--primary);font-size:0.9rem;user-select:none;">';
+  h += '<span id="autoKnowledgeToggleIcon">&#x25B6;</span> View auto-generated content</div>';
+  h += '<div id="autoKnowledgePanel" style="display:none;margin-top:8px;">';
+  h += '<div class="card"><div class="card-header"><h4>Auto-Generated Knowledge</h4></div><div class="card-body">';
   h += '<textarea class="form-control knowledge-textarea" id="autoKbText" readonly style="background:var(--gray-100);color:var(--gray-700);">' + esc(autoKB ? autoKB.content : '') + '</textarea>';
   h += '<div class="form-actions" style="margin-top:12px">';
   h += '<button class="btn btn-primary" id="regenerateKbBtn">' + (autoKB ? 'Regenerate Now' : 'Generate Now') + '</button></div>';
   if (autoKB && autoKB.updated_at) {
-    h += '<p class="last-updated">Last generated: ' + new Date(autoKB.updated_at).toLocaleString() + '</p>';
+    h += '<p class="last-updated" id="autoKbTimestamp">Last generated: ' + new Date(autoKB.updated_at).toLocaleString() + '</p>';
   }
-  h += '</div></div>';
+  h += '</div></div></div>';
   c.innerHTML = h;
+
+  // Auto-generate knowledge silently on load
+  generateAutoKnowledge().then(function(text) {
+    if (text) {
+      var ta = document.getElementById('autoKbText');
+      if (ta) ta.value = text;
+      var ts = document.getElementById('autoKbTimestamp');
+      if (ts) ts.textContent = 'Last generated: ' + new Date().toLocaleString();
+    }
+  }).catch(function(){});
 
   // Manual save handler
   document.getElementById('kbSaveBtn').onclick = async function() {
