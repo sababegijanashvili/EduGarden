@@ -8,10 +8,8 @@
 
   function formatRoleLabel(role, lang) {
     if (!role) return lang === 'ge' ? 'სხვა' : 'Other';
-    var en = (role.role_en || '').trim();
-    var ge = (role.role_ge || '').trim();
-    if (ge && en) return ge + ' (' + en + ')';
-    return en || ge || (lang === 'ge' ? 'სხვა' : 'Other');
+    if (lang === 'ge') return (role.role_ge || '').trim() || (role.role_en || '').trim() || 'სხვა';
+    return (role.role_en || '').trim() || (role.role_ge || '').trim() || 'Other';
   }
 
   function formatRoleBadgeText(role, lang) {

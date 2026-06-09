@@ -125,11 +125,12 @@
 .role-order-item.drag-over{border-top:3px solid var(--green)}
 .role-drag-handle{font-size:1.25rem;color:var(--gray-500);line-height:1;flex-shrink:0;cursor:grab}
 .role-order-label{font-weight:600;color:var(--gray-800);flex:1}
-    .role-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    .role-chip{border:2px solid transparent;border-radius:20px;padding:8px 14px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px}
-    .role-chip:hover{opacity:.9;transform:translateY(-1px)}
-    .role-chip.selected{box-shadow:0 0 0 2px var(--green-dark);border-color:var(--green-dark)!important}
-    .role-chip .chip-check{font-size:.75rem}
+    .staff-role-selector-wrapper{display:flex;flex-direction:column;gap:8px}
+    .staff-role-chips{display:flex;flex-wrap:wrap;gap:6px}
+    .staff-role-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 10px;border-radius:12px;font-size:.8rem;font-weight:600;line-height:1.5}
+    .staff-role-chip-remove{background:none;border:none;font-size:1rem;cursor:pointer;padding:0;line-height:1;opacity:0.7;display:flex;align-items:center;color:inherit;margin-left:2px}
+    .staff-role-chip-remove:hover{opacity:1}
+    .staff-role-add-select{margin-top:2px;font-size:.85rem}
   </style>
 </head>
 <body>
@@ -853,7 +854,7 @@ async function rroles(c) {
     c.innerHTML = '<div class="empty-state"><div class="icon">&#x1F3F7;&#xFE0F;</div><p>No roles yet. Click + Add New to create one.</p></div>';
     return;
   }
-  var h = '<div class="role-order-panel"><h3>Drag roles to reorder (top = highest priority)</h3><div class="role-order-list" id="roleOrderList">';
+  var h = '<div class="role-order-panel"><div class="role-order-list" id="roleOrderList">';
   allRolesLibrary.forEach(function(role) {
     h += '<div class="role-order-item" draggable="true" data-role-id="' + role.id + '"';
     h += ' ondragstart="handleRoleDragStart(event)" ondragover="handleRoleDragOver(event)" ondrop="handleRoleDrop(event)" ondragend="handleRoleDragEnd(event)" ondragleave="handleRoleDragLeave(event)">';
@@ -1023,15 +1024,30 @@ function renderStaffRoleChips() {
     container.innerHTML = '<p style="color:var(--gray-600);font-size:.9rem">No roles defined yet. Add roles in the Roles section first.</p>';
     return;
   }
-  var html = '<div class="role-chips">';
-  allRolesLibrary.forEach(function(role) {
-    var selected = staffSelectedRoleIds.indexOf(role.id) !== -1;
-    html += '<button type="button" class="role-chip' + (selected ? ' selected' : '') + '" data-role-id="' + role.id + '" onclick="toggleStaffRoleChip(\'' + role.id + '\')" style="background:' + (role.badge_color || '#8d6e63') + ';color:' + (role.badge_text_color || '#fff') + ';border-color:' + (role.badge_color || '#8d6e63') + '">';
-    if (selected) html += '<span class="chip-check">&#x2713;</span>';
-    html += escHtmlAttr(formatRoleLabelAdmin(role)) + '</button>';
+  var selectedRoles = allRolesLibrary.filter(function(r) { return staffSelectedRoleIds.indexOf(r.id) !== -1; });
+  var availableRoles = allRolesLibrary.filter(function(r) { return staffSelectedRoleIds.indexOf(r.id) === -1; });
+  var html = '<div class="staff-role-selector-wrapper">';
+  if (selectedRoles.length) {
+    html += '<div class="staff-role-chips">';
+    selectedRoles.forEach(function(role) {
+      html += '<span class="staff-role-chip" style="background:' + (role.badge_color || '#8d6e63') + ';color:' + (role.badge_text_color || '#fff') + '">';
+      html += escHtmlAttr(formatRoleLabelAdmin(role));
+      html += '<button type="button" class="staff-role-chip-remove" onclick="toggleStaffRoleChip(\'' + role.id + '\');event.stopPropagation();">&times;</button>';
+      html += '</span>';
+    });
+    html += '</div>';
+  }
+  html += '<select class="form-control staff-role-add-select" onchange="onRoleSelect(this)">';
+  html += '<option value="">' + (availableRoles.length ? 'Add role...' : 'All roles assigned') + '</option>';
+  availableRoles.forEach(function(role) {
+    html += '<option value="' + role.id + '">' + escHtmlAttr(formatRoleLabelAdmin(role)) + '</option>';
   });
-  html += '</div>';
+  html += '</select></div>';
   container.innerHTML = html;
+}
+
+function onRoleSelect(select) {
+  if (select.value) toggleStaffRoleChip(select.value);
 }
 
 function toggleStaffRoleChip(roleId) {
@@ -1049,7 +1065,7 @@ function ssf(id) {
 
   var h = '<form id="sf">';
   h += '<div class="form-group"><label>Name *</label><input class="form-control" id="sn" required></div>';
-  h += '<div class="form-group"><label>Roles (click to assign)</label><div id="staffRoleChips"><div class="spinner-sm"></div></div></div>';
+  h += '<div class="form-group"><label>Roles</label><div id="staffRoleChips"><div class="spinner-sm"></div></div></div>';
   h += '<div class="form-row"><div class="form-group"><label>Bio (EN)</label><textarea class="form-control" id="s_bio_en"></textarea></div>';
   h += '<div class="form-group"><label>Bio (GE)</label><textarea class="form-control" id="s_bio_ge"></textarea></div></div>';
   h += '<div class="form-row"><div class="form-group"><label>Specialization (EN)</label><input class="form-control" id="s_spec_en"></div>';
