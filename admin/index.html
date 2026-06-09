@@ -1211,6 +1211,8 @@ function dtp(id, iu) {
 // ============================================================
 // 5. MESSAGES
 // ============================================================
+var messageCache = [];
+
 function renderMessageItem(m) {
   var d = new Date(m.created_at).toLocaleString();
   var h = '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
@@ -1224,12 +1226,10 @@ function renderMessageItem(m) {
   return h;
 }
 
-async function rm(c) {
-  var r = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
-  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
-  if (!r.data || !r.data.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>'; return; }
-  var unread = r.data.filter(function(m) { return !m.is_read; });
-  var read = r.data.filter(function(m) { return m.is_read; });
+function renderMessages(c) {
+  if (!messageCache.length) { c.innerHTML = '<div class="empty-state"><div class="icon">&#x2709;&#xFE0F;</div><p>No messages yet.</p></div>'; return; }
+  var unread = messageCache.filter(function(m) { return !m.is_read; });
+  var read = messageCache.filter(function(m) { return m.is_read; });
   var h = '<div style="display:flex;flex-direction:column;gap:16px">';
   h += '<div class="card"><div class="card-header"><h4>Unread <span class="badge" style="background:var(--blue);color:white;padding:2px 8px;border-radius:10px;font-size:.75rem;margin-left:8px">' + unread.length + '</span></h4></div><div class="card-body" style="padding:0">';
   if (!unread.length) { h += '<p class="empty-state" style="margin:0;padding:20px">No unread messages</p>'; }
@@ -1241,6 +1241,13 @@ async function rm(c) {
   else { read.forEach(function(m) { h += renderMessageItem(m); }); }
   h += '</div></div></div>';
   c.innerHTML = h;
+}
+
+async function rm(c) {
+  var r = await supabaseClient.from('contact_messages').select('*').order('created_at', { ascending: false });
+  if (r.error) { c.innerHTML = '<p class="empty-state">Error: ' + r.error.message + '</p>'; return; }
+  messageCache = r.data || [];
+  renderMessages(c);
 }
 
 function toggleMsg(el) { el.classList.toggle('expanded'); }
@@ -1266,25 +1273,12 @@ async function mr(id) {
     .eq('id', id);
   console.log('Update error:', error);
   if (error) { st('Error: ' + error.message, 'error'); return; }
-  if (makeRead) { unreadCount = Math.max(0, unreadCount - 1); } else { unreadCount += 1; }
-  var badge = document.getElementById('unreadBadge');
-  if (badge) { badge.textContent = unreadCount; badge.style.display = unreadCount > 0 ? 'inline' : 'none'; }
-  if (makeRead) {
-    var msgEl = document.querySelector('.message-item[data-id="' + id + '"]');
-    if (msgEl) {
-      var unreadBody = msgEl.closest('.card-body');
-      msgEl.classList.remove('unread');
-      if (unreadBody && unreadBody.id !== 'readMessagesSection') {
-        msgEl.remove();
-        var readSection = document.getElementById('readMessagesSection');
-        if (readSection) { readSection.appendChild(msgEl); }
-      }
-      var readBtn = msgEl.querySelector('.btn-primary');
-      if (readBtn) readBtn.textContent = 'Mark Unread';
-    }
-  } else {
-    rs('messages');
+  for (var i = 0; i < messageCache.length; i++) {
+    if (messageCache[i].id === id) { messageCache[i].is_read = makeRead; break; }
   }
+  var content = document.getElementById('sectionContent');
+  if (content) renderMessages(content);
+  updateUnreadBadge();
 }
 
 async function dmsg(id) {
