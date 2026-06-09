@@ -1220,7 +1220,7 @@ function renderMessageItem(m) {
   h += '<div class="msg-preview">' + (m.email || '') + '</div>';
   h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
   h += '<div class="msg-actions">';
-  h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();mr(\'' + m.id + '\')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
+  h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();markMessageRead(\'' + m.id + '\',' + (!m.is_read) + ')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
   h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
   h += '</div></div>';
   return h;
@@ -1261,24 +1261,25 @@ function toggleReadSection() {
   if (icon) icon.innerHTML = isHidden ? '&#x25B2;' : '&#x25BC;';
 }
 
-async function mr(id) {
+async function markMessageRead(id, makeRead) {
   console.log('mr called with id:', id);
-  var el = document.querySelector('.message-item[data-id="' + id + '"]');
-  if (!el) { console.log('Element not found'); return; }
-  var makeRead = el.classList.contains('unread');
   console.log('makeRead:', makeRead);
+  
   const { error } = await supabaseClient
     .from('contact_messages')
     .update({ is_read: makeRead })
     .eq('id', id);
+  
   console.log('Update error:', error);
-  if (error) { st('Error: ' + error.message, 'error'); return; }
-  for (var i = 0; i < messageCache.length; i++) {
-    if (messageCache[i].id === id) { messageCache[i].is_read = makeRead; break; }
-  }
-  var content = document.getElementById('sectionContent');
-  if (content) renderMessages(content);
-  updateUnreadBadge();
+  
+  const { data: verify, error: verifyError } = await supabaseClient
+    .from('contact_messages')
+    .select('id, is_read')
+    .eq('id', id)
+    .single();
+  
+  console.log('Verify error:', verifyError);
+  console.log('DB state after update:', verify);
 }
 
 async function dmsg(id) {
