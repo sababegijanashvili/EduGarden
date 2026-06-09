@@ -1255,12 +1255,36 @@ function toggleReadSection() {
 }
 
 async function mr(id) {
+  console.log('mr called with id:', id);
   var el = document.querySelector('.message-item[data-id="' + id + '"]');
-  if (!el) return;
-  var currentlyRead = !el.classList.contains('unread');
-  var result = await supabaseClient.from('contact_messages').update({ read: !currentlyRead }).eq('id', id);
-  if (result.error) { st('Error updating message', 'error'); return; }
-  rs('messages');
+  if (!el) { console.log('Element not found'); return; }
+  var makeRead = el.classList.contains('unread');
+  console.log('makeRead:', makeRead);
+  const { error } = await supabaseClient
+    .from('contact_messages')
+    .update({ read: makeRead })
+    .eq('id', id);
+  console.log('Update error:', error);
+  if (error) { st('Error: ' + error.message, 'error'); return; }
+  if (makeRead) { unreadCount = Math.max(0, unreadCount - 1); } else { unreadCount += 1; }
+  var badge = document.getElementById('unreadBadge');
+  if (badge) { badge.textContent = unreadCount; badge.style.display = unreadCount > 0 ? 'inline' : 'none'; }
+  if (makeRead) {
+    var msgEl = document.querySelector('.message-item[data-id="' + id + '"]');
+    if (msgEl) {
+      var unreadBody = msgEl.closest('.card-body');
+      msgEl.classList.remove('unread');
+      if (unreadBody && unreadBody.id !== 'readMessagesSection') {
+        msgEl.remove();
+        var readSection = document.getElementById('readMessagesSection');
+        if (readSection) { readSection.appendChild(msgEl); }
+      }
+      var readBtn = msgEl.querySelector('.btn-primary');
+      if (readBtn) readBtn.textContent = 'Mark Unread';
+    }
+  } else {
+    rs('messages');
+  }
 }
 
 async function dmsg(id) {
