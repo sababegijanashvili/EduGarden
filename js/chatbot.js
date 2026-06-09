@@ -99,6 +99,8 @@ async function loadChatbotKnowledge() {
       .select('content')
       .order('created_at', { ascending: false });
 
+    console.log('knowledge query error:', error);
+    console.log('knowledge raw data:', data);
     if (error) throw error;
 
     if (data && data.length) {
@@ -107,6 +109,7 @@ async function loadChatbotKnowledge() {
         .filter(function(c) { return c && c.trim(); })
         .join('\n\n');
     }
+    console.log('knowledge loaded, length:', chatbotState.knowledge ? chatbotState.knowledge.length : 0);
   } catch (e) {
     console.log('Failed to load chatbot knowledge:', e.message);
   }
@@ -180,6 +183,10 @@ async function callGemini(userText) {
     },
     contents: contents
   };
+
+  console.log('=== SYSTEM PROMPT SENT TO GEMINI ===');
+  console.log(systemPrompt);
+  console.log('=== END SYSTEM PROMPT ===');
 
   try {
     var res = await fetch(
