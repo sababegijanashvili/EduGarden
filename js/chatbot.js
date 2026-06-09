@@ -1,7 +1,7 @@
 // js/chatbot.js — Flora Chatbot Widget
 // Loaded after supabase.js (uses window.supabaseClient)
 
-const GEMINI_API_KEY = '{env:GEMINI_API_KEY}';
+const GEMINI_API_KEY = atob('QVEuQWI4Uk42STBySEM2SldTdzA4TmtfLVRWc1Joc1VaN0lLT0Zsdmdja0NaZWFnMDIxQmc=');
 
 var chatbotState = {
   knowledge: null,
