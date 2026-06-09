@@ -220,6 +220,37 @@
   window.addEventListener('resize', closeActivePopover);
   window.addEventListener('scroll', closeActivePopover, { passive: true });
 
+  // Staff photo lightbox
+  function getPhotoLightbox() {
+    var lb = document.getElementById('staff-photo-lightbox');
+    if (lb) return lb;
+    lb = document.createElement('div');
+    lb.id = 'staff-photo-lightbox';
+    lb.className = 'staff-photo-lightbox';
+    var img = document.createElement('img');
+    img.id = 'staff-photo-lightbox-img';
+    img.alt = '';
+    lb.appendChild(img);
+    lb.addEventListener('click', closePhotoLightbox);
+    document.body.appendChild(lb);
+    return lb;
+  }
+  function openPhotoLightbox(url) {
+    closeActivePopover();
+    var lb = getPhotoLightbox();
+    document.getElementById('staff-photo-lightbox-img').src = url;
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePhotoLightbox() {
+    var lb = document.getElementById('staff-photo-lightbox');
+    if (lb) lb.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePhotoLightbox();
+  });
+
   function renderStaff() {
     closeActivePopover();
     var container = document.getElementById('staff-section');
@@ -319,6 +350,10 @@
           cardImg.src = member.photo_url || '';
           cardImg.alt = member.name || '';
           cardImg.className = 'staff-compact-photo';
+          cardImg.onclick = function(e) {
+            e.stopPropagation();
+            if (member.photo_url) openPhotoLightbox(member.photo_url);
+          };
           topDiv.appendChild(cardImg);
 
           var infoDiv = document.createElement('div');
