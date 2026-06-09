@@ -1280,6 +1280,12 @@ async function markMessageRead(id, makeRead) {
   
   console.log('Verify error:', verifyError);
   console.log('DB state after update:', verify);
+  for (var i = 0; i < messageCache.length; i++) {
+    if (messageCache[i].id === id) { messageCache[i].is_read = makeRead; break; }
+  }
+  var content = document.getElementById('sectionContent');
+  if (content) renderMessages(content);
+  updateUnreadBadge();
 }
 
 async function dmsg(id) {
