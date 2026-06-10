@@ -98,8 +98,6 @@ async function loadChatbotKnowledge() {
       .from('chatbot_knowledge')
       .select('content');
 
-    console.log('knowledge query error:', error);
-    console.log('knowledge raw data:', data);
     if (error) throw error;
 
     if (data && data.length) {
@@ -108,9 +106,7 @@ async function loadChatbotKnowledge() {
         .filter(function(c) { return c && c.trim(); })
         .join('\n\n');
     }
-    console.log('knowledge loaded, length:', chatbotState.knowledge ? chatbotState.knowledge.length : 0);
   } catch (e) {
-    console.log('Failed to load chatbot knowledge:', e.message);
   }
 }
 
@@ -183,10 +179,6 @@ async function callGemini(userText) {
     contents: contents
   };
 
-  console.log('=== SYSTEM PROMPT SENT TO GEMINI ===');
-  console.log(systemPrompt);
-  console.log('=== END SYSTEM PROMPT ===');
-
   try {
     var res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY,
@@ -201,8 +193,6 @@ async function callGemini(userText) {
 
     hideTypingIndicator();
     chatbotState.awaitingResponse = false;
-
-    console.log('Gemini API raw response:', data);
 
     if (!res.ok) {
       var isGeorgian = document.body.classList.contains('georgian');
@@ -226,7 +216,6 @@ async function callGemini(userText) {
     hideTypingIndicator();
     chatbotState.awaitingResponse = false;
     addMessage('Sorry, I couldn\'t reach the server. Please check your connection and try again.', false);
-    console.log('Gemini API error:', e.message);
   }
 }
 
