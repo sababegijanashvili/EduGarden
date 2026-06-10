@@ -202,17 +202,25 @@ async function callGemini(userText) {
     hideTypingIndicator();
     chatbotState.awaitingResponse = false;
 
-    if (data.candidates && data.candidates.length && data.candidates[0].content && data.candidates[0].content.parts.length) {
-      var reply = data.candidates[0].content.parts[0].text;
-      addMessage(reply, false);
-    } else {
-      var errMsg = data.error ? data.error.message : '';
+    console.log('Gemini API raw response:', data);
+
+    if (!res.ok) {
       var isGeorgian = document.body.classList.contains('georgian');
-      if (errMsg && (errMsg.toLowerCase().indexOf('quota') !== -1 || errMsg.indexOf('RESOURCE_EXHAUSTED') !== -1 || errMsg.toLowerCase().indexOf('rate limit') !== -1)) {
+      var errMsg = data.error ? data.error.message : '';
+      if (res.status === 429 || errMsg.toLowerCase().indexOf('quota') !== -1 || errMsg.indexOf('RESOURCE_EXHAUSTED') !== -1 || errMsg.toLowerCase().indexOf('rate limit') !== -1) {
         addMessage(isGeorgian ? 'ფლორას ამჟამად სძინავს... 🌸 ცოტა ხანში სცადეთ თავიდან!' : 'Flora is taking a quick break 🌸 Please try again in a moment!', false);
       } else {
         addMessage(isGeorgian ? 'დაფიქსირდა შეცდომა. გთხოვთ სცადოთ მოგვიანებით.' : 'Something went wrong. Please try again later.', false);
       }
+      return;
+    }
+
+    if (data.candidates && data.candidates.length && data.candidates[0].content && data.candidates[0].content.parts.length) {
+      var reply = data.candidates[0].content.parts[0].text;
+      addMessage(reply, false);
+    } else {
+      var isGeorgian = document.body.classList.contains('georgian');
+      addMessage(isGeorgian ? 'დაფიქსირდა შეცდომა. გთხოვთ სცადოთ მოგვიანებით.' : 'Something went wrong. Please try again later.', false);
     }
   } catch (e) {
     hideTypingIndicator();
