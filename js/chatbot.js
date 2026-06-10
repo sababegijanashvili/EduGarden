@@ -189,7 +189,7 @@ async function callGemini(userText) {
 
   try {
     var res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -206,8 +206,13 @@ async function callGemini(userText) {
       var reply = data.candidates[0].content.parts[0].text;
       addMessage(reply, false);
     } else {
-      var errMsg = data.error ? data.error.message : 'No response from Flora. Please try again.';
-      addMessage(errMsg, false);
+      var errMsg = data.error ? data.error.message : '';
+      var isGeorgian = document.body.classList.contains('georgian');
+      if (errMsg && (errMsg.toLowerCase().indexOf('quota') !== -1 || errMsg.indexOf('RESOURCE_EXHAUSTED') !== -1 || errMsg.toLowerCase().indexOf('rate limit') !== -1)) {
+        addMessage(isGeorgian ? 'ფლორას ამჟამად სძინავს... 🌸 ცოტა ხანში სცადეთ თავიდან!' : 'Flora is taking a quick break 🌸 Please try again in a moment!', false);
+      } else {
+        addMessage(isGeorgian ? 'დაფიქსირდა შეცდომა. გთხოვთ სცადოთ მოგვიანებით.' : 'Something went wrong. Please try again later.', false);
+      }
     }
   } catch (e) {
     hideTypingIndicator();
