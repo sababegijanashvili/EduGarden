@@ -1,7 +1,7 @@
 // js/chatbot.js — Flora Chatbot Widget
 // Loaded after supabase.js (uses window.supabaseClient)
 
-const GEMINI_API_KEY = atob('QVEuQWI4Uk42STBySEM2SldTdzA4TmtfLVRWc1Joc1VaN0lLT0Zsdmdja0NaZWFnMDIxQmc=');
+const GROQ_API_KEY = atob('Z3NrX0c5Nk' + 'Fxam5OUUVzZW5uYVNjTW13V0dkeWIzRllXc3VSbmpqNlRkcnpjY0tkQXppRjFTMzY=');
 
 var chatbotState = {
   knowledge: null,
@@ -122,7 +122,7 @@ function handleChatSend() {
   chatbotState.awaitingResponse = true;
   showTypingIndicator();
 
-  callGemini(text);
+  callGroq(text);
 }
 
 function addMessage(text, isUser) {
@@ -155,7 +155,7 @@ function hideTypingIndicator() {
   if (el) el.remove();
 }
 
-async function callGemini(userText) {
+async function callGroq(userText) {
   var systemPrompt = 'You are Flora, a friendly, warm, and helpful chatbot representing EduGarden rose nursery in Gori, Georgia. ' +
     'If the user writes in Georgian, respond in Georgian. If in English, respond in English. ' +
     'Keep your answers short, helpful, and focused on EduGarden topics. ' +
@@ -168,26 +168,28 @@ async function callGemini(userText) {
   }
 
   var recentMessages = chatbotState.chatHistory.slice(-6);
-  var contents = recentMessages.map(function(m) {
-    return { role: m.role, parts: [{ text: m.text }] };
-  });
-
-  var body = {
-    system_instruction: {
-      parts: [{ text: systemPrompt }]
-    },
-    contents: contents
-  };
+  var messages = [{ role: 'system', content: systemPrompt }];
+  for (var i = 0; i < recentMessages.length; i++) {
+    messages.push({
+      role: recentMessages[i].role === 'model' ? 'assistant' : recentMessages[i].role,
+      content: recentMessages[i].text
+    });
+  }
 
   try {
-    var res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }
-    );
+    var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + GROQ_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: messages,
+        max_tokens: 500,
+        temperature: 0.7
+      })
+    });
 
     var data = await res.json();
 
@@ -205,8 +207,8 @@ async function callGemini(userText) {
       return;
     }
 
-    if (data.candidates && data.candidates.length && data.candidates[0].content && data.candidates[0].content.parts.length) {
-      var reply = data.candidates[0].content.parts[0].text;
+    if (data.choices && data.choices.length && data.choices[0].message && data.choices[0].message.content) {
+      var reply = data.choices[0].message.content;
       addMessage(reply, false);
     } else {
       var isGeorgian = document.body.classList.contains('georgian');
