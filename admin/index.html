@@ -334,6 +334,8 @@ function showConfirm(title, message, callback) {
 function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('active'); confirmCallback = null; }
 function executeConfirm() { if (confirmCallback) confirmCallback(); closeConfirm(); }
 
+function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
 function switchSection(section) {
   currentSection = section;
   document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.toggle('active', el.dataset.section === section); });
@@ -1220,9 +1222,9 @@ var messageCache = [];
 function renderMessageItem(m) {
   var d = new Date(m.created_at).toLocaleString();
   var h = '<div class="message-item' + (m.is_read ? '' : ' unread') + '" data-id="' + m.id + '" onclick="toggleMsg(this)">';
-  h += '<div class="msg-header"><span class="msg-name">' + (m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
-  h += '<div class="msg-preview">' + (m.email || '') + '</div>';
-  h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + m.email : '') + '</strong><br>' + (m.message || '') + '</div>';
+  h += '<div class="msg-header"><span class="msg-name">' + esc(m.name || 'Anonymous') + '</span><span class="msg-date">' + d + '</span></div>';
+  h += '<div class="msg-preview">' + esc(m.email || '') + '</div>';
+  h += '<div class="msg-full"><strong>' + (m.email ? 'Email: ' + esc(m.email) : '') + '</strong><br>' + esc(m.message || '') + '</div>';
   h += '<div class="msg-actions">';
   h += '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();markMessageRead(\'' + m.id + '\',' + (!m.is_read) + ')">' + (m.is_read ? 'Mark Unread' : 'Mark Read') + '</button>';
   h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dmsg(\'' + m.id + '\')">&#x1F5D1;&#xFE0F; Delete</button>';
