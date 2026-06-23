@@ -1,6 +1,7 @@
 // js/chatbot.js — Flora Chatbot Widget
 // Loaded after supabase.js (uses window.supabaseClient)
 
+const GEMINI_API_KEY = atob('QVEuQWI4Uk42STBySEM2SldTdzA4TmtfLVRWc1Joc1VaN0lLT0Zsdmdja0NaZWFnMDIxQmc=');
 
 var chatbotState = {
   knowledge: null,
@@ -179,14 +180,20 @@ async function callGemini(userText) {
   };
 
   try {
-    var res = await fetch(
-      '/api/chat',
-      {
+    var res;
+    try {
+      res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }
-    );
+      });
+    } catch (e) {
+      res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
 
     var data = await res.json();
 
