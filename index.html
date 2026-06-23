@@ -254,11 +254,11 @@
       </div>
       <form class="contact-form" autocomplete="off">
         <label class="form-label" for="name" data-translate="contact_name">Name</label>
-        <input class="form-input" id="name" name="name" type="text" placeholder="Your Name" required />
+        <input class="form-input" id="name" name="name" type="text" placeholder="Your Name" maxlength="100" required />
         <label class="form-label" for="email" data-translate="contact_email">Email</label>
-        <input class="form-input" id="email" name="email" type="email" placeholder="Your Email" required />
+        <input class="form-input" id="email" name="email" type="email" placeholder="Your Email" maxlength="200" required />
         <label class="form-label" for="message" data-translate="contact_message">Message</label>
-        <textarea class="form-textarea" id="message" name="message" placeholder="Your Message" required></textarea>
+        <textarea class="form-textarea" id="message" name="message" placeholder="Your Message" maxlength="2000" required></textarea>
         <button class="form-btn" type="submit" data-translate="contact_send">Send</button>
       </form>
     </section>
@@ -298,7 +298,7 @@
     <div class="footer-copyright" id="footer-copyright" data-translate="footer_copyright">© 2025 EduGarden. All rights
       reserved. | Social Entrepreneurship for a Sustainable Future</div>
   </footer>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
   <script src="js/supabase.js"></script>
   <script src="js/language.js"></script>
   <script src="js/catalog.js"></script>

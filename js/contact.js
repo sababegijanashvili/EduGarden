@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   var form = document.querySelector('.contact-form');
   if (!form) return;
+  window._lastContactSubmit = 0;
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
     var name = form.elements['name'].value.trim();
@@ -10,11 +11,21 @@ document.addEventListener('DOMContentLoaded', function() {
       window.showToast('Please fill all fields', 'error');
       return;
     }
+    if (name.length > 100 || email.length > 200 || message.length > 2000) {
+      window.showToast('Input too long', 'error');
+      return;
+    }
+    var now = Date.now();
+    if (now - window._lastContactSubmit < 30000) {
+      window.showToast('Please wait 30 seconds between messages', 'error');
+      return;
+    }
     try {
       var result = await window.supabaseClient.from('contact_messages').insert([{ name: name, email: email, message: message }]);
       if (result.error) {
         window.showToast('Error sending message: ' + result.error.message, 'error');
       } else {
+        window._lastContactSubmit = now;
         window.showToast('Message sent!', 'success');
         form.reset();
       }
